@@ -1,6 +1,6 @@
 import uuid
-from api.scanner.schemas import RequestScanTask
-from core.redis_queue import RedisClient
+from app.api.scanner.schemas import RequestScanTask
+from app.core.redis_queue import RedisClient
 from sqlalchemy.orm import Session
 from app.db.models import ScanResult
 

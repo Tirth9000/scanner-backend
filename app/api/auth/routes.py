@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 import uuid
-from api.auth.scheams import RegisterRequest, LoginRequest
+from app.api.auth.schemas import RegisterRequest, LoginRequest
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.db.models import User
-from api.auth.helper_functions import hashPassword, verifyPassword, generateToken
-from core.middleware import protect
+from app.api.auth.helper_functions import hashPassword, verifyPassword, generateToken
+from app.core.middleware import protect
 
 router = APIRouter(prefix='/api/auth', tags=['auth'])
 

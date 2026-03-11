@@ -3,15 +3,15 @@ load_dotenv()  # Load env vars FIRST before other imports
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.auth.routes import router as auth_router
-from api.scanner.routes import router as scanner_router
+from app.api.auth.routes import router as auth_router
+from app.api.scanner.routes import router as scanner_router
 from app.db.create_db import init_db
 from app.db.init_db import init_tables
-from api.scanner.routes import router as scanner_router
-from api.webhooks.routes import router as webhook_scanner_router
-from api.seed.routes import router as seed_router, seed_questions_data
-from api.assessment.routes import router as assessment_router
-from api.questions.routes import router as questions_router
+from app.api.scanner.routes import router as scanner_router
+from app.api.webhooks.routes import router as webhook_scanner_router
+from app.api.seed.routes import router as seed_router, seed_questions_data
+from app.api.assessment.routes import router as assessment_router
+from app.api.questions.routes import router as questions_router
 
 app = FastAPI()
 

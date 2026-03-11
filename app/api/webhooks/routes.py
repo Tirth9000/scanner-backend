@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from api.webhooks.schemas import ScannerWebhookRequest, ScannerWebhookResultRequest
+from app.api.webhooks.schemas import ScannerWebhookRequest, ScannerWebhookResultRequest
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 from app.db.base import get_db

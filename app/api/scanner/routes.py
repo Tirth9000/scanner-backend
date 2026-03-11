@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from api.scanner.service import create_scan_task_to_queue
-from api.scanner.schemas import RequestScanTask
-from core.redis_queue import RedisClient
+from app.api.scanner.service import create_scan_task_to_queue
+from app.api.scanner.schemas import RequestScanTask
+from app.core.redis_queue import RedisClient
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.db.models import ScanResult

@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Text, Integer, ForeignKey, TIMESTAMP, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
-from db.base import Base
+from app.db.base import Base
 
 class User(Base):
     __tablename__ = "users"

@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 import json
-from api.assessment.schemas import SubmitAssessmentBody
-from core.middleware import protect
+from app.api.assessment.schemas import SubmitAssessmentBody
+from app.core.middleware import protect
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.db.models import Question, AssessmentResult
-from utils.generate_assessment_pdf import generate_assessment_pdf_bytes
+from app.utils.generate_assessment_pdf import generate_assessment_pdf_bytes
 
 
 router = APIRouter(prefix="/api/assess", tags=["assessment"])
