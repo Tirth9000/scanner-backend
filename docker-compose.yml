@@ -1,59 +1,47 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: postgres
+    container_name: scanner-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: shieldstat
+      POSTGRES_DB: scanner-db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - shieldstat
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d shieldstat"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+      - scanner-network
+    
 
   redis:
-    image: redis
+    image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
     networks:
-      - shieldstat
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
+      - scanner-network
 
   backend:
     build: .
-    container_name: shieldstat-backend
+    container_name: scanner-backend
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://postgres:admin@postgres:5432/shieldstat
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: 7109f3e59be30049a1641006e26f81d2294642a6885768f25af549b110efa867014bc30edb96b9547e9efb01cc70e8a7485a913499f5c65c09eb1ef30463f126
+      - DATABASE_URL=postgresql://postgres:admin@postgres:5432/scanner-db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # - REDIS_ADDR=redis:6379
+    volumes:
+      - .:/app
     networks:
-      - shieldstat
+      - scanner-network
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - redis
 
 networks:
-  shieldstat:
-    driver: bridge
+  scanner-network:
+    external: true
 
 volumes:
   postgres_data:
