@@ -1,32 +1,32 @@
-from fastapi import APIRouter
-from api.scanner.service import create_scan_task_to_queue
-from api.scanner.schemas import RequestScanTask
-from core.redis_queue import RedisClient
-import json
-from db.base import getCursor
+from fastapi import APIRouter, Depends
+from app.api.scanner.service import create_scan_task_to_queue
+from app.api.scanner.schemas import RequestScanTask
+from app.core.redis_queue import RedisClient
+from sqlalchemy.orm import Session
+from app.db.base import get_db
+from app.db.models import ScanResult
+import uuid, json
 
 
 router = APIRouter(prefix='/api/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
-async def register_scan_task(request: RequestScanTask):
+async def register_scan_task(
+    request: RequestScanTask,
+    db: Session = Depends(get_db)
+):
     result = await create_scan_task_to_queue(request)
     scan_id = result["scan_id"]
-
-    cursor = getCursor()
-    cursor.execute(
-        """
-        INSERT INTO scan_results(user_id, scan_id, domain, results)
-        VALUES (%s, %s, %s, %s)
-        """,
-        (
-            request.user_id,
-            scan_id,
-            request.target,
-            json.dumps({'status': 'pending'})
-        ),
+    new_scan = ScanResult(
+        user_id=request.user_id,
+        scan_id=scan_id,
+        domain=request.target,
+        results={"status": "pending"}
     )
-    cursor.close()
+
+    db.add(new_scan)
+    db.commit()
+
     return result
 
 

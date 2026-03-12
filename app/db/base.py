@@ -1,18 +1,29 @@
-import psycopg
 import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-_conn = None
 
-def get_connection():
-    global _conn
-    if _conn is None:
-        if not DATABASE_URL:
-            raise ValueError("DATABASE_URL environment variable is not set")
-        _conn = psycopg.connect(DATABASE_URL)
-        _conn.autocommit = True
-    return _conn
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
+# Engine (connection pool handled automatically)
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,
+    pool_pre_ping=True
+)
 
-def getCursor():
-    return get_connection().cursor()
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

@@ -1,65 +1,60 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
-from db.base import getCursor
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 import os
 import json
 
+from app.db.base import get_db
+from app.db.models import Question
 
 router = APIRouter(prefix="/api/seed", tags=["insert_questions"])
 
 
-def seed_questions_data():
+def seed_questions_data(db: Session):
     try:
-        cursor = getCursor()
-
-        # Check if questions already exist
-        cursor.execute("SELECT COUNT(*) FROM questions")
-        row = cursor.fetchone()
-        count = row[0] if row is not None else 0
+        count = db.query(Question).count()
 
         if count > 0:
-            cursor.close()
             return (False, "Questions already exist — seeding skipped", count)
 
-        app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        app_dir = os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(__file__)
+            )
+        )
         data_path = os.path.join(app_dir, "data", "questionsData.json")
 
         with open(data_path, "r", encoding="utf-8") as f:
             questions = json.load(f)
 
-        # Insert questions into DB
-        # NOTE: questions table now uses `_id` as the primary key column,
-        # but the JSON still has `id`. We store that value into `_id`.
-        insert_sql = """
-            INSERT INTO questions (_id, category_id, category_name, question_text, options)
-            VALUES (%s, %s, %s, %s, %s)
-        """
+        question_objects = []
 
         for q in questions:
-            cursor.execute(
-                insert_sql,
-                (
-                    q["id"],
-                    q["category_id"],
-                    q["category_name"],
-                    q["question_text"],
-                    json.dumps(q["options"]),
-                ),
+            question = Question(
+                _id=q["id"],
+                category_id=q["category_id"],
+                category_name=q["category_name"],
+                question_text=q["question_text"],
+                options=q["options"]
             )
+            question_objects.append(question)
 
-        cursor.close()
+        db.bulk_save_objects(question_objects)
+        db.commit()
+
         return (True, "Questions seeded successfully", len(questions))
 
     except Exception as e:
+        db.rollback()
         print(f"Error seeding questions: {e}")
         raise
 
 
 @router.post("/")
-async def seed_questions():
+def seed_questions(db: Session = Depends(get_db)):
     try:
-        success, message, count = seed_questions_data()
-        
+        success, message, count = seed_questions_data(db)
         status_code = 201 if success else 200
         return JSONResponse(
             status_code=status_code,
@@ -68,7 +63,6 @@ async def seed_questions():
                 "count": count,
             },
         )
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Server Error")
 
+    except Exception:
+        raise HTTPException(status_code=500, detail="Server Error")

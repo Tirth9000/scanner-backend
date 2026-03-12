@@ -1,16 +1,21 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 import uuid
-from api.auth.scheams import RegisterRequest, LoginRequest
-from db.base import getCursor
-from api.auth.helper_functions import hashPassword, verifyPassword, generateToken
-from core.middleware import protect
+from app.api.auth.schemas import RegisterRequest, LoginRequest
+from sqlalchemy.orm import Session
+from app.db.base import get_db
+from app.db.models import User
+from app.api.auth.helper_functions import hashPassword, verifyPassword, generateToken
+from app.core.middleware import protect
 
 router = APIRouter(prefix='/api/auth', tags=['auth'])
 
 # new user registration
 @router.post('/register')
-async def register(req: RegisterRequest):
+def register(
+    req: RegisterRequest,
+    db: Session = Depends(get_db)
+):
     username = req.username
     email = req.email
     password = req.password
@@ -18,136 +23,101 @@ async def register(req: RegisterRequest):
     if not username or not email or not password:
         raise HTTPException(status_code=400, detail="Please fill all the fields")
 
-    try: 
-        cursor = getCursor()
+    try:
+        # 1️⃣ Check if user exists
+        existing_user = db.query(User).filter(
+            User.email == email.lower()
+        ).first()
 
-        # check if the user exists
-        cursor.execute(
-            "SELECT id FROM users WHERE email = %s",
-            (email,)
-        )
-        if cursor.fetchone():
-            cursor.close()
+        if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
-            
-        hashedPassword = hashPassword(password)
+
+        # 2️⃣ Create new user
+        hashed_password = hashPassword(password)
         user_id = str(uuid.uuid4())
 
-        # insert user in db
-        cursor.execute(
-            """
-            INSERT INTO users(id, username, email, password)
-            VALUES(%s, %s, %s, %s)
-            RETURNING id, username, email
-            """,
-            (user_id, username, email.lower(), hashedPassword)
+        new_user = User(
+            id=user_id,
+            username=username,
+            email=email.lower(),
+            password=hashed_password
         )
 
-        result = cursor.fetchone()
-        cursor.close()
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-        if result:
-            user_id, user_username, user_email = result
-            return JSONResponse(
-                status_code=201,
-                content={
-                    "id": str(user_id),
-                    "username": user_username,
-                    "email": user_email,
-                    "token": generateToken(str(user_id)) 
-                }
-            )
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "message": "Invalid User data"
-                }
-            )
+        return {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "token": generateToken(new_user.id)
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Server Error")
+        db.rollback()
+        print("REGISTER ERROR:", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 # user login
 @router.post('/login')
-async def login(req: LoginRequest):
-    
+def login(
+    req: LoginRequest,
+    db: Session = Depends(get_db)
+):
     email = req.email
     password = req.password
 
     if not email or not password:
         raise HTTPException(status_code=400, detail="Please fill all the fields")
-    
+
     try:
-        cursor = getCursor()
-        cursor.execute(
-            """
-            SELECT id, username, email, password FROM users WHERE email = %s
-            """,
-            (email.lower(),)
-        )
+        user = db.query(User).filter(
+            User.email == email.lower()
+        ).first()
 
-        userFound = cursor.fetchone()
-        cursor.close()
-
-        if userFound:
-            hashedPassword = userFound[3]
-
-        if userFound and verifyPassword(password, hashedPassword):
-            user_id, user_username, user_email, _ = userFound
-            return JSONResponse(
-                status_code=200,
-                content={
-                    'id': user_id,
-                    'username': user_username,
-                    'email': user_email,
-                    'token': generateToken(str(user_id))
-                }
-            )
-        else:
+        if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        
+
+        if not verifyPassword(password, user.password):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "token": generateToken(user.id)
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Server Error")
-
-
-# get current user (protected route)
-@router.get('/me')
-async def getUser(user: dict = Depends(protect)):
-    return JSONResponse(status_code=200, content=user)
-
+        print("LOGIN ERROR:", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 # user profile data
 @router.get('/profile/{id}')
-async def getProfile(id: str):
+def getProfile(
+    id: str,
+    db: Session = Depends(get_db)
+):
     try:
-        cursor = getCursor()
-        
-        cursor.execute(
-            """
-            SELECT id, username, email FROM users WHERE id = %s
-            """,
-            (id,)
-        )
+        user = db.query(User).filter(User.id == id).first()
 
-        user = cursor.fetchone()
-        cursor.close()
-
-        if user:
-            user_id, user_username, user_email = user
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "_id": str(user_id),
-                    "username": user_username,
-                    "email": user_email
-                }
-            )
-        else:
+        if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
+        return {
+            "_id": user.id,
+            "username": user.username,
+            "email": user.email
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Server Error")
+        print("PROFILE ERROR:", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")

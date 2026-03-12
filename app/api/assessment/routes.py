@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 import json
-from api.assessment.schemas import SubmitAssessmentBody
-from core.middleware import protect
-from db.base import getCursor
-from utils.generate_assessment_pdf import generate_assessment_pdf_bytes
+from app.api.assessment.schemas import SubmitAssessmentBody
+from app.core.middleware import protect
+from sqlalchemy.orm import Session
+from app.db.base import get_db
+from app.db.models import Question, AssessmentResult
+from app.utils.generate_assessment_pdf import generate_assessment_pdf_bytes
 
 
 router = APIRouter(prefix="/api/assess", tags=["assessment"])
@@ -46,83 +48,63 @@ def mapRiskToColor(risk: str) -> str:
         return "red"
     return "gray"
 
-
 @router.post("/")
-async def submit_assessment(body: SubmitAssessmentBody, user: dict = Depends(protect)):
+def submit_assessment(
+    body: SubmitAssessmentBody,
+    user: dict = Depends(protect),
+    db: Session = Depends(get_db),
+):
     try:
         answers = body.answers
         if not isinstance(answers, list) or len(answers) == 0:
-            return JSONResponse(status_code=400, content={"error": "Invalid answers payload"})
+            raise HTTPException(status_code=400, detail="Invalid answers payload")
 
-        cursor = getCursor()
-        cursor.execute("SELECT _id, category_name, question_text, options FROM questions")
-        rows = cursor.fetchall() or []
+        questions = db.query(Question).all()
 
-        if len(rows) == 0:
-            cursor.close()
-            return JSONResponse(status_code=500, content={"error": "No questions found"})
-
-        # Map: question _id (int) -> {category_name, question_text, options(list)}
-        questionMap = {}
-        for q_id, category_name, question_text, options in rows:
-            # psycopg may give dict/list for JSONB; if it's a string, decode it
-            if isinstance(options, str):
-                try:
-                    options = json.loads(options)
-                except Exception:
-                    options = []
-            questionMap[str(q_id)] = {
-                "_id": q_id,
-                "category_name": category_name,
-                "question_text": question_text,
-                "options": options or [],
+        if not questions:
+            raise HTTPException(status_code=500, detail="No questions found")
+        questionMap = {
+            str(q._id): {
+                "_id": q._id,
+                "category_name": q.category_name,
+                "question_text": q.question_text,
+                "options": q.options or [],
             }
+            for q in questions
+        }
 
         totalScore = 0
         maxPossibleScore = 0
         categoryTracker = {}
         processedAnswers = []
 
-        # max score bookkeeping (same as JS: each question max = 3)
-        for _, category_name, _, _ in rows:
-            if category_name not in categoryTracker:
-                categoryTracker[category_name] = {"score": 0, "max": 0}
-            categoryTracker[category_name]["max"] += 3
+        for q in questions:
+            if q.category_name not in categoryTracker:
+                categoryTracker[q.category_name] = {"score": 0, "max": 0}
+            categoryTracker[q.category_name]["max"] += 3
             maxPossibleScore += 3
-
         for ans in answers:
             qid = ans.questionId
-            # Our Postgres questions now use numeric _id as primary key.
+
             if not isinstance(qid, str) or not qid.isdigit():
-                cursor.close()
-                return JSONResponse(
+                raise HTTPException(
                     status_code=400,
-                    content={
-                        "error": "Invalid questionId payload (expected numeric question id). "
-                        "Fetch questions from GET /api/questions and send their numeric id."
-                    },
+                    detail="Invalid questionId payload",
                 )
 
             question = questionMap.get(qid)
             if not question:
                 continue
-
             options = question["options"]
             idx = ans.selectedOption
             if idx < 0 or idx >= len(options):
-                cursor.close()
-                return JSONResponse(
+                raise HTTPException(
                     status_code=400,
-                    content={"error": f"Invalid selectedOption {idx} for question {qid} (must be 0, 1, 2, or 3)"},
+                    detail=f"Invalid selectedOption {idx} for question {qid}",
                 )
+
             selectedOption = options[idx]
-
-            if isinstance(selectedOption, dict):
-                score_val = selectedOption.get("score")
-                points = int(score_val) if score_val is not None else 0
-            else:
-                points = 0
-
+            points = int(selectedOption.get("score", 0))
             totalScore += points
             categoryTracker[question["category_name"]]["score"] += points
 
@@ -130,15 +112,7 @@ async def submit_assessment(body: SubmitAssessmentBody, user: dict = Depends(pro
                 {
                     "questionId": question["_id"],
                     "questionText": question["question_text"],
-                    "selectedOption": (
-                        {
-                            "option_key": selectedOption.get("option_key"),
-                            "option_text": selectedOption.get("option_text"),
-                            "score": selectedOption.get("score"),
-                        }
-                        if isinstance(selectedOption, dict)
-                        else None
-                    ),
+                    "selectedOption": selectedOption,
                     "pointsAwarded": points,
                     "quotation": ans.quotation or None,
                 }
@@ -151,6 +125,7 @@ async def submit_assessment(body: SubmitAssessmentBody, user: dict = Depends(pro
             grade = calculateGrade(percentage)
             risk = mapGradeToRisk(grade)
             color = mapRiskToColor(risk)
+
             categoryScores.append(
                 {
                     "category_name": name,
@@ -163,7 +138,6 @@ async def submit_assessment(body: SubmitAssessmentBody, user: dict = Depends(pro
                 }
             )
 
-        # OVERALL SUMMARY
         overallPercentage = round((totalScore / maxPossibleScore) * 100) if maxPossibleScore > 0 else 0
         overallGrade = calculateGrade(overallPercentage)
         overallRisk = mapGradeToRisk(overallGrade)
@@ -171,148 +145,102 @@ async def submit_assessment(body: SubmitAssessmentBody, user: dict = Depends(pro
 
         summary = {
             "score": totalScore,
-            "total_questions": len(rows),
+            "total_questions": len(questions),
             "max_possible_score": maxPossibleScore,
             "percentage": overallPercentage,
             "grade": overallGrade,
             "risk_level": overallRisk,
             "risk_color": overallColor,
         }
-
-        cursor.execute(
-            """
-            INSERT INTO assessment_results (_id, user_id, summary, category_scores, answers)
-            VALUES (gen_random_uuid(), %s, %s, %s, %s)
-            RETURNING _id, user_id, summary, category_scores, answers, created_at
-            """,
-            (
-                user["id"],
-                json.dumps(summary),
-                json.dumps(categoryScores),
-                json.dumps(processedAnswers),
-            ),
+        new_result = AssessmentResult(
+            user_id=user["id"],
+            summary=summary,
+            category_scores=categoryScores,
+            answers=processedAnswers,
         )
-        created = cursor.fetchone()
-        cursor.close()
 
-        if not created:
-            return JSONResponse(status_code=500, content={"error": "Assessment submission failed"})
+        db.add(new_result)
+        db.commit()
+        db.refresh(new_result)
 
-        result_id, user_id, db_summary, db_category_scores, db_answers, created_at = created
-
-        # Normalize jsonb outputs if needed
-        def _maybe_load(v):
-            if isinstance(v, str):
-                try:
-                    return json.loads(v)
-                except Exception:
-                    return v
-            return v
-
-        data = {
-            "_id": str(result_id),
-            "user": user_id,
-            "summary": _maybe_load(db_summary),
-            "category_scores": _maybe_load(db_category_scores),
-            "answers": _maybe_load(db_answers),
-            "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else created_at,
-            "updated_at": created_at.isoformat() if hasattr(created_at, "isoformat") else created_at,
+        return {
+            "success": True,
+            "resultId": str(new_result._id),
+            "data": {
+                "_id": str(new_result._id),
+                "user": user["id"],
+                "summary": summary,
+                "category_scores": categoryScores,
+                "answers": processedAnswers,
+                "created_at": new_result.created_at.isoformat(),
+            },
         }
-
-        return JSONResponse(status_code=200, content={"success": True, "resultId": str(result_id), "data": data})
-
+    except HTTPException:
+        raise
     except Exception as err:
+        db.rollback()
         print("ASSESSMENT SUBMIT ERROR:", err)
-        return JSONResponse(status_code=500, content={"error": "Assessment submission failed"})
-
+        raise HTTPException(status_code=500, detail="Assessment submission failed")
 
 @router.get("/history")
-async def history(user: dict = Depends(protect)):
+def history(
+    user: dict = Depends(protect),
+    db: Session = Depends(get_db),
+):
     try:
-        cursor = getCursor()
-        cursor.execute(
-            """
-            SELECT _id, user_id, summary, category_scores, answers, created_at
-            FROM assessment_results
-            WHERE user_id = %s
-            ORDER BY created_at DESC
-            """,
-            (user["id"],),
+        results = (
+            db.query(AssessmentResult)
+            .filter(AssessmentResult.user_id == user["id"])
+            .order_by(AssessmentResult.created_at.desc())
+            .all()
         )
-        rows = cursor.fetchall() or []
-        cursor.close()
 
-        def _maybe_load(v):
-            if isinstance(v, str):
-                try:
-                    return json.loads(v)
-                except Exception:
-                    return v
-            return v
-
-        history = []
-        for rid, uid, summ, cats, ans, ca in rows:
-            history.append(
-                {
-                    "_id": str(rid),
-                    "user": uid,
-                    "summary": _maybe_load(summ),
-                    "category_scores": _maybe_load(cats),
-                    "answers": _maybe_load(ans),
-                    "created_at": ca.isoformat() if hasattr(ca, "isoformat") else ca,
-                    "updated_at": ca.isoformat() if hasattr(ca, "isoformat") else ca,
-                }
-            )
-
-        return JSONResponse(status_code=200, content=history)
+        return [
+            {
+                "_id": str(r._id),
+                "user": r.user_id,
+                "summary": r.summary,
+                "category_scores": r.category_scores,
+                "answers": r.answers,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in results
+        ]
 
     except Exception as err:
         print("FETCH HISTORY ERROR:", err)
-        return JSONResponse(status_code=500, content={"error": "Failed to fetch history"})
-
+        raise HTTPException(status_code=500, detail="Failed to fetch history")
 
 @router.get("/{id}/download")
-async def download_pdf(id: str, user: dict = Depends(protect)):
+def download_pdf(
+    id: str,
+    user: dict = Depends(protect),
+    db: Session = Depends(get_db),
+):
     try:
-        cursor = getCursor()
-        cursor.execute(
-            """
-            SELECT _id, user_id, summary, category_scores, answers, created_at
-            FROM assessment_results
-            WHERE _id::text = %s
-            """,
-            (id,),
+        result = (
+            db.query(AssessmentResult)
+            .filter(AssessmentResult._id == id)
+            .first()
         )
-        row = cursor.fetchone()
-        cursor.close()
 
-        if not row:
+        if not result:
             raise HTTPException(status_code=404, detail="Assessment not found")
 
-        rid, uid, summ, cats, ans, created_at = row
-        if uid != user["id"]:
+        if result.user_id != user["id"]:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        def _maybe_load(v):
-            if isinstance(v, str):
-                try:
-                    return json.loads(v)
-                except Exception:
-                    return v
-            return v
-
         assessment = {
-            "_id": str(rid),
-            "user": uid,
-            "summary": _maybe_load(summ),
-            "category_scores": _maybe_load(cats),
-            "answers": _maybe_load(ans),
-            "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else created_at,
-            "updated_at": created_at.isoformat() if hasattr(created_at, "isoformat") else created_at,
+            "_id": str(result._id),
+            "user": result.user_id,
+            "summary": result.summary,
+            "category_scores": result.category_scores,
+            "answers": result.answers,
+            "created_at": result.created_at.isoformat(),
         }
-
         pdf_bytes = generate_assessment_pdf_bytes(assessment)
         filename = f"assessment-{assessment['_id']}.pdf"
+
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -323,4 +251,3 @@ async def download_pdf(id: str, user: dict = Depends(protect)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Failed to generate PDF")
-

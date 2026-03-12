@@ -1,45 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,Depends
 from fastapi.responses import JSONResponse
-from db.base import getCursor
 import json
-
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from app.db.base import get_db
+from app.db.models import Question
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
 
 
 @router.get("/")
-async def get_questions():
+def get_questions(db: Session = Depends(get_db)):
     try:
-        cursor = getCursor()
-        cursor.execute(
-            """
-            SELECT _id, category_id, category_name, question_text, options
-            FROM questions
-            ORDER BY _id ASC
-            """
+        questions = (
+            db.query(Question)
+            .order_by(Question._id.asc())
+            .all()
         )
-        rows = cursor.fetchall() or []
-        cursor.close()
-
-        questions = []
-        for q_id, category_id, category_name, question_text, options in rows:
-            if isinstance(options, str):
-                try:
-                    options = json.loads(options)
-                except Exception:
-                    pass
-            questions.append(
-                {
-                    "_id": q_id,
-                    "category_id": category_id,
-                    "category_name": category_name,
-                    "question_text": question_text,
-                    "options": options,
-                }
-            )
-
-        return JSONResponse(status_code=200, content=questions)
+        return [
+            {
+                "_id": q._id,
+                "category_id": q.category_id,
+                "category_name": q.category_name,
+                "question_text": q.question_text,
+                "options": q.options,
+            }
+            for q in questions
+        ]
     except Exception as e:
-        print(e)
+        print("FETCH QUESTIONS ERROR:", e)
         raise HTTPException(status_code=500, detail="Failed to fetch questions")
-
