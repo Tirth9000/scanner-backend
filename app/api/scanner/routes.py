@@ -15,17 +15,17 @@ async def register_scan_task(
     request: RequestScanTask,
     db: Session = Depends(get_db)
 ):
-    result = await create_scan_task_to_queue(request)
+    result = await create_scan_task_to_queue(db, request)
     scan_id = result["scan_id"]
-    new_scan = ScanResult(
-        user_id=request.user_id,
-        scan_id=scan_id,
-        domain=request.target,
-        results={"status": "pending"}
-    )
+    # new_scan = ScanResult(
+    #     user_id=request.user_id,
+    #     scan_id=scan_id,
+    #     domain=request.target,
+    #     results={"status": "pending"}
+    # )
 
-    db.add(new_scan)
-    db.commit()
+    # db.add(new_scan)
+    # db.commit()
 
     return result
 

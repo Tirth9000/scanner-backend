@@ -14,7 +14,7 @@ def create_scan_task_to_queue(
     scan_id = str(uuid.uuid4())
 
     new_scan = ScanResult(
-        user_id=data.user_id,
+        # user_id=data.user_id,
         scan_id=scan_id,
         domain=data.target,
         results={"status": "pending", "progress": 0}
@@ -24,7 +24,7 @@ def create_scan_task_to_queue(
     db.commit()
 
     scan_job = {
-        "user_id": data.user_id,
+        # "user_id": data.user_id,
         "scan_id": scan_id,
         "target": data.target,
         "status": "pending",
