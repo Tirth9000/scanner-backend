@@ -7,11 +7,9 @@ class ScannerWebhookRequest(BaseModel):
     scan_id: str
     target: str
     event: str
-    data: str
+    status : str
 
 class ScannerWebhookResultRequest(BaseModel):
     scan_id: str
     target: str
     data: Any
-    # timestamp: str
-

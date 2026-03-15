@@ -1,39 +1,50 @@
 import uuid
+from sqlalchemy.orm import Session
+
 from app.api.scanner.schemas import RequestScanTask
 from app.core.redis_queue import RedisClient
-from sqlalchemy.orm import Session
-from app.db.models import ScanResult
+from app.db.models import ScanResult, ScanRequest
+
 
 redis_client = RedisClient()
 
 
-def create_scan_task_to_queue(
-    db: Session,
-    data: RequestScanTask
-):
-    scan_id = str(uuid.uuid4())
+async def create_scan_task_to_queue(db: Session, data: RequestScanTask):
 
-    new_scan = ScanResult(
-        # user_id=data.user_id,
-        scan_id=scan_id,
-        domain=data.target,
-        results={"status": "pending", "progress": 0}
-    )
+    try:
+        scan_id = str(uuid.uuid4())
 
-    db.add(new_scan)
-    db.commit()
+        new_request = ScanRequest(
+            scan_id=scan_id,
+            domain=data.target
+        )
 
-    scan_job = {
-        # "user_id": data.user_id,
-        "scan_id": scan_id,
-        "target": data.target,
-        "status": "pending",
-        "progress": 0
-    }
+        new_result = ScanResult(
+            scan_id=scan_id,
+            domain=data.target,
+            results={
+                "status": "pending",
+                "progress": 0
+            }
+        )
 
-    redis_client.PushToQueue(data=scan_job)
+        db.add_all([new_request, new_result])
+        db.commit()
 
-    return {
-        "message": "Scan task registered successfully",
-        "scan_id": scan_id
-    }
+        scan_job = {
+            "scan_id": scan_id,
+            "target": data.target,
+            "status": "pending",
+            "progress": 0
+        }
+
+        await redis_client.PushToQueue(data=scan_job)
+
+        return {
+            "message": "Scan task registered successfully",
+            "scan_id": scan_id
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise e

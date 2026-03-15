@@ -24,7 +24,6 @@ def init_db():
             sql.SQL("CREATE DATABASE {}")
             .format(sql.Identifier(db_name))
         )
-        print(f"Database '{db_name}' created successfully")
 
     cursor.close()
     conn.close()

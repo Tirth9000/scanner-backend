@@ -1,18 +1,18 @@
 from dotenv import load_dotenv
-load_dotenv()  # Load env vars FIRST before other imports
+load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.auth.routes import router as auth_router
+# from app.api.auth.routes import router as auth_router
 from app.api.scanner.routes import router as scanner_router
 from app.db.create_db import init_db
 from app.db.init_db import init_tables
 from app.api.scanner.routes import router as scanner_router
 from app.api.webhooks.routes import router as webhook_scanner_router
-from app.api.seed.routes import router as seed_router, seed_questions_data
 from app.api.assessment.routes import router as assessment_router
 from app.api.questions.routes import router as questions_router
-
+from app.api.questions.service import seed_questions_data
+from app.db.base import SessionLocal
 app = FastAPI()
 
 # Initialize database on startup
@@ -22,13 +22,19 @@ async def startup_event():
     init_db()
     init_tables()
 
-    # Seed questions safely
-    try:
-        tup = seed_questions_data()
-        print(tup[1])
-    except Exception as e:
-        print(f"Error seeding questions: {e}")
+    db = SessionLocal()
 
+    try:
+        result = seed_questions_data(db)
+        print("Seed Result:", result)
+    except Exception as e:
+        print("Seeding failed:", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to seed questions on startup"
+        )
+    finally:
+        db.close()
 
 # CORS
 app.add_middleware(
@@ -40,17 +46,13 @@ app.add_middleware(
 )
 
 # routes
-app.include_router(auth_router)
-app.include_router(seed_router)
+# app.include_router(auth_router)
 app.include_router(scanner_router)
 app.include_router(webhook_scanner_router)
 app.include_router(assessment_router)
 app.include_router(questions_router)
 
 
-@app.get('/')
-def root():
-    return "Scanner Backend is running"
 
 if __name__ == "__main__":
     import uvicorn

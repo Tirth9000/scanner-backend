@@ -41,5 +41,4 @@ def protect(
         }
 
     except JWTError as error:
-        print("JWT ERROR:", error)
         raise HTTPException(status_code=401, detail="Not authorized, token failed")

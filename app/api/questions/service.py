@@ -8,9 +8,6 @@ import json
 from app.db.base import get_db
 from app.db.models import Question
 
-router = APIRouter(prefix="/api/seed", tags=["insert_questions"])
-
-
 def seed_questions_data(db: Session):
     try:
         count = db.query(Question).count()
@@ -23,6 +20,7 @@ def seed_questions_data(db: Session):
                 os.path.dirname(__file__)
             )
         )
+
         data_path = os.path.join(app_dir, "data", "questionsData.json")
 
         with open(data_path, "r", encoding="utf-8") as f:
@@ -47,22 +45,4 @@ def seed_questions_data(db: Session):
 
     except Exception as e:
         db.rollback()
-        print(f"Error seeding questions: {e}")
-        raise
-
-
-@router.post("/")
-def seed_questions(db: Session = Depends(get_db)):
-    try:
-        success, message, count = seed_questions_data(db)
-        status_code = 201 if success else 200
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "message": message,
-                "count": count,
-            },
-        )
-
-    except Exception:
-        raise HTTPException(status_code=500, detail="Server Error")
+        raise HTTPException(status_code=500, detail=str(e))

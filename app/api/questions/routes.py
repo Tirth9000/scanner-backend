@@ -28,5 +28,4 @@ def get_questions(db: Session = Depends(get_db)):
             for q in questions
         ]
     except Exception as e:
-        print("FETCH QUESTIONS ERROR:", e)
         raise HTTPException(status_code=500, detail="Failed to fetch questions")
