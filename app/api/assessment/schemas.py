@@ -12,16 +12,6 @@ class Summary(BaseModel):
     risk_color: Optional[str] = None
 
 
-class CategoryScore(BaseModel):
-    category_name: Optional[str] = None
-    score: Optional[float] = None
-    max_score: Optional[float] = None
-    percentage: Optional[float] = None
-    grade: Optional[str] = None
-    risk: Optional[str] = None
-    color: Optional[str] = None
-
-
 class SelectedOption(BaseModel):
     option_key: Optional[str] = None
     option_text: Optional[str] = None
@@ -33,22 +23,23 @@ class Answer(BaseModel):
     questionText: Optional[str] = None
     selectedOption: Optional[SelectedOption] = None
     pointsAwarded: Optional[float] = None
-    question: Optional[str] = None
+    quotation: Optional[str] = None
 
 
 class AssessmentResult(BaseModel):
-    user: str
     summary: Summary
-    category_scores: List[CategoryScore]
     answers: List[Answer]
+
 
 class SubmitAnswer(BaseModel):
     questionId: str
-    selectedOption: int = Field(ge=0, le=3, description="Option index: 0, 1, 2, or 3")
+    selectedOption: int = Field(
+        ge=0,
+        le=3,
+        description="Option index: 0, 1, 2, or 3"
+    )
     quotation: Optional[str] = None
 
 
 class SubmitAssessmentBody(BaseModel):
-    domain: Optional[str] = None
     answers: List[SubmitAnswer]
-
