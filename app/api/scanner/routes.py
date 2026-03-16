@@ -13,7 +13,7 @@ router = APIRouter(prefix='/api/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
 async def register_scan_task(request: RequestScanTask,db: Session = Depends(get_db)):
-    return await create_scan_task_to_queue(db, request)
+    return create_scan_task_to_queue(db, request)
 
 @router.get("/scanlist")
 async def get_scan_list():
