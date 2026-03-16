@@ -9,7 +9,7 @@ from app.db.models import ScanResult, ScanRequest
 redis_client = RedisClient()
 
 
-async def create_scan_task_to_queue(db: Session, data: RequestScanTask):
+def create_scan_task_to_queue(db: Session, data: RequestScanTask):
 
     try:
         scan_id = str(uuid.uuid4())
@@ -38,7 +38,7 @@ async def create_scan_task_to_queue(db: Session, data: RequestScanTask):
             "progress": 0
         }
 
-        await redis_client.PushToQueue(data=scan_job)
+        redis_client.PushToQueue(data=scan_job)
 
         return {
             "message": "Scan task registered successfully",

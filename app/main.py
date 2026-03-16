@@ -26,9 +26,7 @@ async def startup_event():
 
     try:
         result = seed_questions_data(db)
-        print("Seed Result:", result)
     except Exception as e:
-        print("Seeding failed:", str(e))
         raise HTTPException(
             status_code=500,
             detail="Failed to seed questions on startup"
