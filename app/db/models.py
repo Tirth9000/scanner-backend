@@ -48,7 +48,7 @@ class ScanResult(Base):
     __tablename__ = "scan_result"
 
     scan_id = Column(String(36),ForeignKey("scan_request.scan_id", ondelete="CASCADE"), primary_key=True)
-    domain = Column(Text, nullable=False)
+    domain = Column(Text, nullable=False) 
     results = Column(JSONB, nullable=False)
 
     __table_args__ = (
@@ -58,9 +58,10 @@ class ScanResult(Base):
 class ScanSummary(Base):
     __tablename__ = "scan_summary"
 
-    scan_id = Column(String(36), ForeignKey("scan_request.scan_id", ondelete="CASCADE"), primary_key=True)
-    s_score = Column(JSONB, nullable=False)
+    scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
+    domain_score = Column(Integer)
+    categorized_vulnerabilities = Column(JSONB)
 
     __table_args__ = (
-        Index("idx_scan_summary_domain", "s_score"),
+        Index("idx_scan_summary_score", "domain_score"),
     )

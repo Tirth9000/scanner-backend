@@ -14,4 +14,3 @@ class WebHookResponse(BaseModel):
     scan_id: str
     data: dict
     message: str
-    
