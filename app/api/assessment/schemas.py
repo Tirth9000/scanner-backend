@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional,Literal
 
 
 class Summary(BaseModel):
@@ -23,7 +23,6 @@ class Answer(BaseModel):
     questionText: Optional[str] = None
     selectedOption: Optional[SelectedOption] = None
     pointsAwarded: Optional[float] = None
-    quotation: Optional[str] = None
 
 
 class AssessmentResult(BaseModel):
@@ -33,13 +32,7 @@ class AssessmentResult(BaseModel):
 
 class SubmitAnswer(BaseModel):
     questionId: str
-    selectedOption: int = Field(
-        ge=0,
-        le=3,
-        description="Option index: 0, 1, 2, or 3"
-    )
-    quotation: Optional[str] = None
-
+    selectedOption: Literal["A", "B", "C", "D"]
 
 class SubmitAssessmentBody(BaseModel):
     answers: List[SubmitAnswer]

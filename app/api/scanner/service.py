@@ -1,10 +1,11 @@
 import uuid
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
+import json
+from collections import defaultdict
 from app.api.scanner.schemas import RequestScanTask
 from app.core.redis_queue import RedisClient
 from app.db.models import ScanResult, ScanRequest
-
 
 redis_client = RedisClient()
 

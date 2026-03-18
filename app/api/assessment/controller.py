@@ -1,6 +1,9 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import Question, AssessmentResult
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from app.db.models import Question, AssessmentResult
 
 
 def calculateGrade(percentage: int) -> str:
@@ -39,9 +42,10 @@ def mapRiskToColor(risk: str) -> str:
     return "gray"
 
 
-async def submit_assessment_logic(body, db: Session):
+def submit_assessment_logic(body, db: Session):
     answers = body.answers
     questions = db.query(Question).all()
+
     if not questions:
         raise HTTPException(status_code=500, detail="No questions found")
 
@@ -57,39 +61,60 @@ async def submit_assessment_logic(body, db: Session):
     totalScore = 0
     maxPossibleScore = 0
     processedAnswers = []
+    seen_questions = set()
 
     for ans in answers:
-
         qid = ans.questionId
-        question = questionMap.get(qid)
 
+        if qid in seen_questions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Duplicate answer for question {qid}"
+            )
+        seen_questions.add(qid)
+
+        question = questionMap.get(qid)
         if not question:
             continue
 
         options = question["options"]
-        idx = ans.selectedOption
 
-        if idx < 0 or idx >= len(options):
+        option_map = {
+            opt.get("option_key"): opt
+            for opt in options
+        }
+
+        selected_key = ans.selectedOption
+
+        selectedOption = option_map.get(selected_key)
+
+        if not selectedOption:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid option {idx} for question {qid}"
+                detail=f"Invalid option '{selected_key}' for question {qid}"
             )
-
-        selectedOption = options[idx]
 
         points = int(selectedOption.get("score", 0))
 
         totalScore += points
-        maxPossibleScore += 3
 
-        processedAnswers.append(
-            {
-                "questionId": str(question["_id"]),
-                "questionText": question["question_text"],
-                "selectedOption": selectedOption,
-                "pointsAwarded": points,
-                "quotation": ans.quotation,
-            }
+        max_score_for_question = max(
+            int(opt.get("score", 0)) for opt in options
+        ) if options else 0
+
+        maxPossibleScore += max_score_for_question
+
+        processedAnswers.append({
+            "questionId": str(question["_id"]),
+            "questionText": question["question_text"],
+            "selectedOption": selectedOption,
+            "pointsAwarded": points,
+        })
+
+    if len(processedAnswers) != len(questionMap):
+        raise HTTPException(
+            status_code=400,
+            detail="All questions must be answered"
         )
 
     percentage = round(
@@ -122,15 +147,17 @@ async def submit_assessment_logic(body, db: Session):
     return new_result
 
 
-async def get_latest_assessment(db: Session):
+def get_latest_assessment(db: Session):
     result = (
         db.query(AssessmentResult)
         .order_by(AssessmentResult.created_at.desc())
         .first()
     )
+
     if not result:
         raise HTTPException(
             status_code=404,
             detail="No assessment results found"
         )
+
     return result
