@@ -71,7 +71,7 @@ Scanner-Backend/
 └── README.md
 ```
 
-⚙️ What Each Layer Does
+What Each Layer Does
 🔹 api
 
     Handles all incoming HTTP requests.
