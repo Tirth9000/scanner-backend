@@ -1,16 +1,10 @@
-
 # Scanner Backend
 
 The Scanner Backend is a FastAPI-based service designed to perform domain scanning, store scan results, and generate summarized security scores.
-
 It acts as the core engine that:
-
 Accepts scan requests
-
 Processes domain-related data
-
 Stores results in a database
-
 Provides summarized insights and scores via APIs
 
 This backend is built with scalability and modularity in mind, making it easy to extend with new scanning features and analytics.
