@@ -14,7 +14,12 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
         if scans:
-            return scans
+            return {
+                "scan_id": scans.scan_id,
+                "domain_score": scans.domain_score,
+                "severity": scans.severity,
+                "categorized_vulnerabilities": scans.categorized_vulnerabilities
+            }
         
         return calculate_score(scan_id, db)
     

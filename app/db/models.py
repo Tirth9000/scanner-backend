@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, TIMESTAMP, Index
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, TIMESTAMP, Index,Float
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -60,6 +60,8 @@ class ScanSummary(Base):
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
     domain_score = Column(Integer)
+    cvss_score = Column(Float)
+    severity = Column(String)
     categorized_vulnerabilities = Column(JSONB)
 
     __table_args__ = (
