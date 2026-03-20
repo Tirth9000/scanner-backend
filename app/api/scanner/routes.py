@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 import uuid, json
 import redis.asyncio as redis
-from app.db.models import ScanResult
+from app.db.models import ScanResult, ScanRequest, ScanSummary
 from fastapi import HTTPException
 redis_client = RedisClient()
 
@@ -38,3 +38,29 @@ def get_scan_result(scan_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     return scan.results
+
+@router.get("/history")
+def get_scan_history(db: Session = Depends(get_db)):
+    from sqlalchemy import or_
+    results = db.query(ScanRequest, ScanSummary)\
+        .outerjoin(ScanSummary, ScanRequest.scan_id == ScanSummary.scan_id)\
+        .filter(
+            or_(
+                ScanRequest.data.op("->>")("type") != "malware",
+                ScanRequest.data.op("->>")("type").is_(None),
+                ScanRequest.data.is_(None),
+            )
+        )\
+        .order_by(ScanRequest.time.desc())\
+        .all()
+    
+    history = []
+    for req, summary in results:
+        history.append({
+            "scan_id": req.scan_id,
+            "domain": req.domain,
+            "time": req.time.isoformat() if req.time else None,
+            "score": summary.domain_score if summary else 0,
+            "status": "Healthy" if summary and summary.domain_score >= 80 else ("Warning" if summary and summary.domain_score >= 60 else "Critical") if summary else "Pending"
+        })
+    return history

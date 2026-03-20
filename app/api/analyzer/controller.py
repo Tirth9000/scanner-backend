@@ -386,6 +386,7 @@ def get_cvss_severity(score):
 def score_subdomain(asset):
     score = START_SCORE
     issues = []
+    category_penalties = defaultdict(int)
 
     dns = asset.get("dns_collection")
     http = asset.get("http_collection")
@@ -394,26 +395,31 @@ def score_subdomain(asset):
     dns_pen, dns_issues = evaluate_dns(dns)
     score -= dns_pen
     issues.extend(dns_issues)
+    category_penalties["DNS Health"] += dns_pen
 
     http_pen, http_issues = evaluate_http(http)
     score -= http_pen
     issues.extend(http_issues)
+    category_penalties["Application Security"] += http_pen
 
     for port in ports:
         p_pen, p_issues = evaluate_port(port)
         score -= p_pen
         issues.extend(p_issues)
+        category_penalties["Network Security"] += p_pen
 
         tls_pen, tls_issues = evaluate_tls(port)
         score -= tls_pen
         issues.extend(tls_issues)
+        category_penalties["TLS Security"] += tls_pen
 
     score = max(score, 0)
 
     return {
         "subdomain": asset.get("subdomain", "unknown"),
         "score": score,
-        "issues": issues
+        "issues": issues,
+        "category_penalties": dict(category_penalties)
     }
 
 

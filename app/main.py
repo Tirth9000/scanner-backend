@@ -13,6 +13,7 @@ from app.api.assessment.routes import router as assessment_router
 from app.api.questions.routes import router as questions_router
 from app.api.analyzer.routes import router as analyzer_router
 from app.api.questions.service import seed_questions_data
+from app.api.malware.routes import router as malware_router
 from app.db.base import SessionLocal
 app = FastAPI()
 
@@ -51,6 +52,7 @@ app.include_router(webhook_scanner_router)
 app.include_router(assessment_router)
 app.include_router(questions_router)
 app.include_router(analyzer_router)
+app.include_router(malware_router)
 
 
 

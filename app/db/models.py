@@ -63,6 +63,7 @@ class ScanSummary(Base):
     cvss_score = Column(Float)
     severity = Column(String)
     categorized_vulnerabilities = Column(JSONB)
+    category_scores = Column(JSONB)
 
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),

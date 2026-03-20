@@ -11,18 +11,24 @@ redis_client = RedisClient()
 
 
 def create_scan_task_to_queue(db: Session, data: RequestScanTask):
+    target = data.target.strip().lower()
+    # Strip protocol (http:// or https://)
+    if "://" in target:
+        target = target.split("://")[1]
+    # Strip path or trailing slash (e.g., example.com/path -> example.com)
+    target = target.split("/")[0]
 
     try:
         scan_id = str(uuid.uuid4())
 
         new_request = ScanRequest(
             scan_id=scan_id,
-            domain=data.target
+            domain=target
         )
 
         new_result = ScanResult(
             scan_id=scan_id,
-            domain=data.target,
+            domain=target,
             results={
                 "status": "pending",
                 "progress": 0
@@ -34,7 +40,7 @@ def create_scan_task_to_queue(db: Session, data: RequestScanTask):
 
         scan_job = {
             "scan_id": scan_id,
-            "target": data.target,
+            "target": target,
             "status": "pending",
             "progress": 0
         }
