@@ -13,14 +13,12 @@ async def websocket_endpoint(websocket: WebSocket, scan_id: str):
     await websocket.accept()
 
     connections[scan_id] = websocket
-    print(f"WebSocket connected: {scan_id}")
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         connections.pop(scan_id, None)
-        print(f"WebSocket disconnected: {scan_id}")
 
 @router.post("/scan/notification")
 async def scanner_webhook(request: ScannerWebhookRequest):
