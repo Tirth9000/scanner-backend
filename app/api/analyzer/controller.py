@@ -3,6 +3,11 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.db.models import ScanSummary, ScanResult
 from app.db.base import get_db
+import requests
+import os
+from concurrent.futures import ThreadPoolExecutor
+
+ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
 
 START_SCORE = 100
 
@@ -209,13 +214,22 @@ def score_domain(data):
 
     domain_score = int(sum(scores) / len(scores)) if scores else 0
 
+    category_scores = defaultdict(lambda: 100)
+    for res in results:
+        for cat, pen in res.get("category_penalties", {}).items():
+            category_scores[cat] -= pen / len(results) if results else 0
+    
+    # Ensure scores stay between 0-100 and are ints
+    final_category_scores = {cat: max(0, int(score)) for cat, score in category_scores.items()}
+
     cvss = get_cvss_severity(domain_score)
 
     return {
         "domain_score": domain_score,
         "cvss_score": cvss["cvss_score"],
         "severity": cvss["severity"],
-        "subdomains": results
+        "subdomains": results,
+        "category_scores": final_category_scores
     }
 
 
@@ -273,23 +287,75 @@ def calculate_score(scan_id: str, db: Session):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     data = scan.results or {}
+    raw_data = data.get("data", [])
 
-    host = data.get("data", {}).get("host", {})
-    subdomains = data.get("data", {}).get("subdomains", [])
+    if isinstance(raw_data, list):
+        subdomains = raw_data
+        host = {}
+    else:
+        host = raw_data.get("host", {})
+        subdomains = raw_data.get("subdomains", [])
 
-    print("Host type:", type(host))
+    print("Subdomains type:", type(subdomains))
     print("Subdomains count:", len(subdomains))
 
     scoring = score_domain(subdomains)
     categorized = categorize_issues(scoring, subdomains)
     ips_of_scan = get_ips_from_scan(subdomains)
+
+    # Parallel IP Reputation logic
+    reputation_findings = []
+    if ips_of_scan:
+        # Limit to first 50 unique IPs to avoid massive delays on large scans
+        ips_to_check = ips_of_scan[:50]
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            # Create a list of futures
+            future_to_ip = {executor.submit(get_ip_reputation, ip): ip for ip in ips_to_check}
+            
+            for future in future_to_ip:
+                ip = future_to_ip[future]
+                try:
+                    rep = future.result()
+                    if rep is not None:
+                        score = rep.get("abuseConfidenceScore", 0)
+                        
+                        severity_val = "Low"
+                        if score > 50:
+                            severity_val = "High"
+                        elif score > 0:
+                            severity_val = "Medium"
+                            
+                        entry = {
+                            "subdomain": "Infrastructure",
+                            "ip": ip,
+                            "severity": severity_val,
+                            "abuse_score": score,
+                            "country": rep.get("countryCode"),
+                            "usage_type": rep.get("usageType"),
+                            "isp": rep.get("isp")
+                        }
+                        reputation_findings.append(entry)
+                        # Penalize global score
+                        if score > 0:
+                            penalty = min(20, score / 2)
+                            scoring["domain_score"] = max(0, scoring["domain_score"] - int(penalty))
+                except Exception as exc:
+                    print(f"IP {ip} generated an exception: {exc}")
+    
+    if reputation_findings:
+        categorized["IP Reputation"]["Malicious IP Activity Detected"] = reputation_findings
+        # Add IP Reputation to category scores
+        total_rep_penalty = sum([min(20, f["abuse_score"] / 2) for f in reputation_findings])
+        scoring["category_scores"]["IP Reputation"] = max(0, 100 - int(total_rep_penalty))
+
     new_summary = ScanSummary(
         scan_id=scan_id,
         domain_score=scoring["domain_score"],
+        cvss_score=scoring.get("cvss_score"),
         severity=scoring["severity"],
-        Host=host,
         categorized_vulnerabilities=categorized,
-        IP=ips_of_scan
+        category_scores=scoring.get("category_scores", {}),
+        ips=ips_of_scan
     )
 
     db.add(new_summary)
@@ -297,6 +363,7 @@ def calculate_score(scan_id: str, db: Session):
     return {
         "scan_id": scan_id,
         "domain_score": scoring["domain_score"],
+        "category_scores": scoring.get("category_scores", {}),
         "host": host,
         "severity": scoring["severity"],
         "categorized_vulnerabilities": categorized,
@@ -305,13 +372,46 @@ def calculate_score(scan_id: str, db: Session):
 
 def get_ips_from_scan(subdomains: list):
     ips = []
-
     for item in subdomains:
+        # From HTTP collection
         http_data = item.get("http_collection", {})
-
         ip = http_data.get("ip")
         if ip:
             ips.append(ip)
-            print(f"Found IP: {ip} for subdomain: {item.get('subdomain')}")
-        print(ips)
+            
+        # From DNS collection (A and AAAA records)
+        dns_data = item.get("dns_collection", {})
+        a_records = dns_data.get("a") or []
+        if isinstance(a_records, list):
+            ips.extend([a_ip for a_ip in a_records if a_ip])
+            
+        aaaa_records = dns_data.get("aaaa") or []
+        if isinstance(aaaa_records, list):
+            ips.extend([aaaa_ip for aaaa_ip in aaaa_records if aaaa_ip])
+            
     return list(set(ips))
+
+def get_ip_reputation(ip: str):
+    if not ABUSEIPDB_API_KEY:
+        print("AbuseIPDB API Key not found")
+        return None
+    
+    url = 'https://api.abuseipdb.com/api/v2/check'
+    params = {
+        'ipAddress': ip,
+        'maxAgeInDays': '90'
+    }
+    headers = {
+        'Accept': 'application/json',
+        'Key': ABUSEIPDB_API_KEY
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=5)
+        if response.status_code == 200:
+            return response.json().get("data")
+        else:
+            print(f"AbuseIPDB API Error: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"Error fetching IP reputation: {e}")
+        return None

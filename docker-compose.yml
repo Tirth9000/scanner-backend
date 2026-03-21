@@ -33,6 +33,7 @@ services:
       - REDIS_PORT=${REDIS_PORT}
       - QUTTERA_API_KEY=${QUTTERA_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
+      - ABUSEIPDB_API_KEY=${ABUSEIPDB_API_KEY}
     volumes:
       - .:/app
     networks:

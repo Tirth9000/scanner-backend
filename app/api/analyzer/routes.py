@@ -14,15 +14,27 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
         if scans:
-            print("Score already exists for scan_id:", scan_id)
-            return {
-                "scan_id": scans.scan_id,
-                "domain_score": scans.domain_score,
-                "host": [scans.Host] if scans.Host else [],
-                "severity": scans.severity,
-                "categorized_vulnerabilities": scans.categorized_vulnerabilities,
-                "ips": scans.IP or []
-            }
+            # Check if this is a stale cache (missing IP reputation data)
+            has_ip_reputation = False
+            if scans.categorized_vulnerabilities:
+                has_ip_reputation = "IP Reputation" in scans.categorized_vulnerabilities
+            
+            if has_ip_reputation:
+                print("Score already exists for scan_id:", scan_id)
+                return {
+                    "scan_id": scans.scan_id,
+                    "domain_score": scans.domain_score,
+                    "category_scores": scans.category_scores or {},
+                    "host": {},
+                    "severity": scans.severity,
+                    "categorized_vulnerabilities": scans.categorized_vulnerabilities,
+                    "ips": scans.ips or []
+                }
+            else:
+                # Stale cache — delete and re-generate with IP reputation
+                print("Stale cache detected for scan_id:", scan_id, "- re-generating with IP reputation")
+                db.delete(scans)
+                db.commit()
         
         return calculate_score(scan_id, db)
     
@@ -31,6 +43,22 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
             status_code=500,
             detail=f"Error generating score: {str(e)}"
         )
+
+@router.post("/rescore/{scan_id}")
+def force_rescore(scan_id: str, db: Session = Depends(get_db)):
+    """Force re-generation of score with latest analysis logic (including IP reputation)."""
+    try:
+        existing = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
+        if existing:
+            db.delete(existing)
+            db.commit()
+        return calculate_score(scan_id, db)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error rescoring: {str(e)}"
+        )
+
 
 @router.get("/get_score/{scan_id}")
 def get_score(scan_id: str, db: Session = Depends(get_db)):
