@@ -1,0 +1,390 @@
+iSecurify — Malware Scan Report
+Domain: wicar.org
+Generated: 3/20/2026, 6:37:58 PM
+Warning: Site is Blacklisted!
+Scanned: wicar.org • Completed: 3/20/2026, 4:24:03 PM
+Sitescan Parameters
+IP Address 199.34.228.69
+Country United States
+Server cloudflare
+CMS Weebly
+Scan Date 3/20/2026, 4:24:03 PM
+Detection Details
+Malicious files 4
+Suspicious files 0
+Potentially Suspicious files 0
+Clean files 13
+Total files scanned 17
+External links detected 122
+Blacklisted links detected 91
+Blacklisted iframes 0
+Blacklisted domains 4
+Blacklisted Yes
+Blacklisting Status
+Provider Status
+Google Safebrowsing Blacklisted
+Phishtank Clean
+Quttera Labs Clean
+Yandex Safebrowsing Clean
+Spamhaus Zen Clean
+Spamhaus ZRD Clean
+Spamhaus CSS Clean
+URLhaus Clean
+QBMA Clean
+---PAGE---
+Malicious Files (17)
+File Path Threat Name Severity Reason MD5
+www.wicar.org/resources.html M.BL.Domain.gen malicious Detected reference to malicious
+blacklisted domain github.com
+50722DF5E6DEA6F9033
+BA3A128061684
+www.wicar.org/test-malware.html M.BL.Domain.gen malicious Detected reference to malicious
+blacklisted domain github.com
+683109003F35303B8EED
+93FBB4C2E191
+www.wicar.org/# M.BL.Domain.gen malicious Detected reference to malicious
+blacklisted domain malware.wicar.org
+194D50D7A8226B66AC4
+B262B22690D3D
+www.wicar.org/feedback.html M.BL.Domain.gen malicious Detected reference to malicious
+blacklisted domain github.com
+A3D176251BFFA157384
+C3A5E5D563E3E
+www.wicar.org.http-redirect Undefined clean No significant issues detected. 78492E1CD8A865D505E
+B71B90668075F
+www.wicar.org/results.html Undefined clean No significant issues detected. A6C297A36ABF09FE657
+BBCF82D9C29F8
+w.sharethis.com/button/buttons.js Undefined clean No significant issues detected. F50C07D0654875EACBA
+72997B7435B72
+cdn2.editmysite.com/js/jquery-1.8.3.mi
+n.js
+Undefined clean No significant issues detected. 3576A6E73C9DCCDBBC
+4A2CF8FF544AD7
+www.medtargetsystem.com/javascript
+/beacon.js?
+Undefined clean No significant issues detected. A91B83BED748CC5215A
+C2830E9F31C3E
+ws.sharethis.com/button/async-button
+s.js
+Undefined clean No significant issues detected. 9862812332604BE17A5B
+6FC762C5758A
+www.wicar.org/files/main_style.css?1
+696165235
+Undefined clean No significant issues detected. 7BDCCF1D256272CD0B
+D4956AD91EE3E9
+www.wicar.org/cdn-cgi/l/email-protecti
+on#84edeae2ebc4f3ede7e5f6aaebf6e
+3
+Undefined clean No significant issues detected. 440B6FDF244C7A26EEE
+78B68C5622D74
+www.wicar.org/cdn-cgi/l/email-protecti
+on#31465852504371565e5e565d545
+6435e4441421f525e5c
+Undefined clean No significant issues detected. FD49D739E50DD301CB
+D7E94EFCF34ED1
+www.wicar.org/cdn-cgi/l/email-protecti
+on#ec85828a83ac9b858f8d9ec2839e
+8b
+Undefined clean No significant issues detected. 21DA4BD9C47848DFCD
+FD2C762AC3CAF4
+www.wicar.org/cdn-cgi/l/email-protecti
+on#a3d4cac0c2d188d0d6c1d0c0d1ca
+c1c6e3c4d1ccd6d3c4d1ccd6d3d08dc
+0ccce
+Undefined clean No significant issues detected. 5DDEE23CA5A12AAD64
+420892BC6EFABF
+www.wicar.org/cdn-cgi/styles/cf.errors
+.css
+Undefined clean No significant issues detected. 5E8C69A459A691B5D1B
+9BE442332C87D
+www.wicar.org/cdn-cgi/styles/cf.errors
+.ie.css
+Undefined clean No significant issues detected. B6664BE34FA5F99C65E
+55E8D721CB511
+Clean Files (13)
+File Path Threat Name Severity Reason MD5
+www.wicar.org.http-redirect Undefined clean No significant issues detected. 78492E1CD8A865D505E
+B71B90668075F
+www.wicar.org/results.html Undefined clean No significant issues detected. A6C297A36ABF09FE657
+BBCF82D9C29F8
+w.sharethis.com/button/buttons.js Undefined clean No significant issues detected. F50C07D0654875EACBA
+72997B7435B72
+cdn2.editmysite.com/js/jquery-1.8.3.mi
+n.js
+Undefined clean No significant issues detected. 3576A6E73C9DCCDBBC
+4A2CF8FF544AD7
+www.medtargetsystem.com/javascript
+/beacon.js?
+Undefined clean No significant issues detected. A91B83BED748CC5215A
+C2830E9F31C3E
+ws.sharethis.com/button/async-button
+s.js
+Undefined clean No significant issues detected. 9862812332604BE17A5B
+6FC762C5758A
+www.wicar.org/files/main_style.css?1
+696165235
+Undefined clean No significant issues detected. 7BDCCF1D256272CD0B
+D4956AD91EE3E9
+www.wicar.org/cdn-cgi/l/email-protecti Undefined clean No significant issues detected. 440B6FDF244C7A26EEE
+---PAGE---
+File Path Threat Name Severity Reason MD5
+on#84edeae2ebc4f3ede7e5f6aaebf6e
+3
+78B68C5622D74
+www.wicar.org/cdn-cgi/l/email-protecti
+on#31465852504371565e5e565d545
+6435e4441421f525e5c
+Undefined clean No significant issues detected. FD49D739E50DD301CB
+D7E94EFCF34ED1
+www.wicar.org/cdn-cgi/l/email-protecti
+on#ec85828a83ac9b858f8d9ec2839e
+8b
+Undefined clean No significant issues detected. 21DA4BD9C47848DFCD
+FD2C762AC3CAF4
+www.wicar.org/cdn-cgi/l/email-protecti
+on#a3d4cac0c2d188d0d6c1d0c0d1ca
+c1c6e3c4d1ccd6d3c4d1ccd6d3d08dc
+0ccce
+Undefined clean No significant issues detected. 5DDEE23CA5A12AAD64
+420892BC6EFABF
+www.wicar.org/cdn-cgi/styles/cf.errors
+.css
+Undefined clean No significant issues detected. 5E8C69A459A691B5D1B
+9BE442332C87D
+www.wicar.org/cdn-cgi/styles/cf.errors
+.ie.css
+Undefined clean No significant issues detected. B6664BE34FA5F99C65E
+55E8D721CB511
+External Links Detected (122)
+URL
+http://wicar.org/
+http://wicar.org/a
+https://badssl.com/
+http://www.eicar.org/
+http://sophostest.com/
+http://www.spycar.org/
+https://github.com/wicar
+http://malware.wicar.org/
+http://www.metasploit.com/
+http://www.stopbadware.org/
+http://wicar.org/results.html
+http://wicar.org/feedback.html
+http://www.osisecurity.com.au/
+http://wicar.org/resources.html
+http://wicar.org/javascript:false
+http://wicar.org/test-malware.html
+https://demo.smartscreen.msft.net/
+http://cvedetails.com/cve/2010-3275/
+http://cvedetails.com/cve/2012-3993/
+http://cvedetails.com/cve/2015-5119/
+https://groups.google.com/group/wicar
+http://malware.wicar.org/data/eicar.com
+http://w.sharethis.com/button/buttons.js
+http://www.youtube.com/embed/R1OOBz5q_SE
+https://malware.wicar.org/data/eicar.com
+http://malware.wicar.org/data/vlc_amv.html
+https://github.com/wicar/malware.wicar.org
+https://malware.wicar.org/data/vlc_amv.html
+---PAGE---
+URL
+https://www.cloudflare.com/5xx-error-landing
+http://wicar.org/cdn-cgi/styles/cf.errors.css
+http://wicar.org/cdn-cgi/styles/cf.errors.ie.css
+http://wicar.org/files/main_style.css?1696165235
+https://ws.sharethis.com/button/async-buttons.js
+http://malware.wicar.org/data/java_jre17_exec.html
+http://malware.wicar.org/data/js_crypto_miner.html
+http://malware.wicar.org/data/ms05_054_onload.html
+http://malware.wicar.org/data/ms14_064_ole_xp.html
+https://cdn2.editmysite.com/js/jquery-1.8.3.min.js
+https://malware.wicar.org/data/java_jre17_exec.html
+https://malware.wicar.org/data/js_crypto_miner.html
+https://malware.wicar.org/data/ms05_054_onload.html
+https://malware.wicar.org/data/ms14_064_ole_xp.html
+https://ws.sharethis.com/images/st-logo-m-widget.png
+http://wicar.org/uploads/5/6/3/3/56336967/4257515.jpg
+https://www.medtargetsystem.com/javascript/beacon.js?
+http://malware.wicar.org/data/ms14_064_ole_not_xp.html
+https://malware.wicar.org/data/ms14_064_ole_not_xp.html
+http://malware.wicar.org/data/ms09_072_style_object.html
+http://wicar.org/uploads/5/6/3/3/56336967/avast_orig.png
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2003-0344
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2005-1790
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2009-0075
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2009-3672
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2010-3962
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2012-4681
+http://cve.mitre.org/cgi-bin/cvename.cgi?name%3D2014-6332
+http://malware.wicar.org/data/ms03_020_ie_objecttype.html
+http://wicar.org/uploads/5/6/3/3/56336967/543207_orig.png
+https://malware.wicar.org/data/ms09_072_style_object.html
+http://wicar.org/uploads/5/6/3/3/56336967/1582165_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/2093399_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/2526724_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/3057312_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/3425196_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/4257515_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/4522709_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/4626061_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/5384326_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/5802161_orig.png
+---PAGE---
+URL
+http://wicar.org/uploads/5/6/3/3/56336967/5867812_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/6997236_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/7352922_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/7581805_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8149933_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8378107_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8872266_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9442983_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9749007_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9772685_orig.jpg
+https://malware.wicar.org/data/ms03_020_ie_objecttype.html
+http://malware.wicar.org/data/ms10_090_ie_css_clip_ie6.html
+https://www.googletagmanager.com/gtag/js?id%3DUA-5568574-11
+http://malware.wicar.org/data/firefox_proto_crmfrequest.html
+http://wicar.org/uploads/5/6/3/3/56336967/ipfire-block_1.jpg
+https://malware.wicar.org/data/ms10_090_ie_css_clip_ie6.html
+http://malware.wicar.org/data/ms09_002_memory_corruption.html
+https://malware.wicar.org/data/firefox_proto_crmfrequest.html
+http://wicar.org/uploads/5/6/3/3/56336967/untangle-block_2.jpg
+https://malware.wicar.org/data/ms09_002_memory_corruption.html
+http://malware.wicar.org/data/adobe_flash_hacking_team_uaf.html
+https://malware.wicar.org/data/adobe_flash_hacking_team_uaf.html
+https://www.cloudflare.com/sign-up?utm_source%3Demail_protection
+http://wicar.org/uploads/5/6/3/3/56336967/eset-av-block2_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/open-dns-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block1_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block2_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block3_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block4_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/watchguard-fireware_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/webroot-endpoint_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/kaspersky-browser_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/symantec-bluecoat_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/avast-premium-desktop_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/mcafee-macos-endpoint_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/trend-officescan-url_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/cloudflare-teams-gateway_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/watchguard-m440-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/eset-endpoint-av-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/fsecure-safe-2020-desktop_1.jpg
+http://wicar.org/cdn-cgi/l/email-protection#84edeae2ebc4f3ede7e5f6aaebf6e3
+---PAGE---
+URL
+http://wicar.org/cdn-cgi/l/email-protection#ec85828a83ac9b858f8d9ec2839e8b
+https://developers.cloudflare.com/fundamentals/setup/account/create-account/
+http://wicar.org/uploads/5/6/3/3/56336967/google-chrome-browser-block_orig.png
+http://wicar.org/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js
+http://wicar.org/uploads/5/6/3/3/56336967/editor/1-1-1-1-with-warp2.png?1625013394
+http://wicar.org/uploads/5/6/3/3/56336967/published/gryphon-mesh-wifi-router_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/published/1-1-1-1-with-warp.png?1625013387
+https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/
+http://wicar.org/uploads/5/6/3/3/56336967/published/mcafee-mobile-block.png?1502166695
+http://wicar.org/cdn-cgi/l/email-protection#31465852504371565e5e565d5456435e4441421f525e5c
+http://wicar.org/cdn-cgi/l/email-protection#a3d4cac0c2d188d0d6c1d0c0d1cac1c6e3c4d1ccd6d3c4d1ccd6d3d08dc0ccce
+https://support.mozilla.org/en-US/kb/how-does-phishing-and-malware-protection-work#w_how-do-i-use-the-phishing-and-malware-protection-features
+Blacklisted Links (91)
+URL
+http://wicar.org/
+http://wicar.org/a
+https://github.com/wicar
+http://malware.wicar.org/
+http://wicar.org/results.html
+http://wicar.org/feedback.html
+http://wicar.org/resources.html
+http://wicar.org/javascript:false
+http://wicar.org/test-malware.html
+http://malware.wicar.org/data/eicar.com
+https://malware.wicar.org/data/eicar.com
+http://malware.wicar.org/data/vlc_amv.html
+https://github.com/wicar/malware.wicar.org
+https://malware.wicar.org/data/vlc_amv.html
+http://wicar.org/cdn-cgi/styles/cf.errors.css
+http://wicar.org/cdn-cgi/styles/cf.errors.ie.css
+http://wicar.org/files/main_style.css?1696165235
+http://malware.wicar.org/data/java_jre17_exec.html
+http://malware.wicar.org/data/js_crypto_miner.html
+http://malware.wicar.org/data/ms05_054_onload.html
+http://malware.wicar.org/data/ms14_064_ole_xp.html
+https://malware.wicar.org/data/java_jre17_exec.html
+https://malware.wicar.org/data/js_crypto_miner.html
+https://malware.wicar.org/data/ms05_054_onload.html
+https://malware.wicar.org/data/ms14_064_ole_xp.html
+http://wicar.org/uploads/5/6/3/3/56336967/4257515.jpg
+---PAGE---
+URL
+http://malware.wicar.org/data/ms14_064_ole_not_xp.html
+https://malware.wicar.org/data/ms14_064_ole_not_xp.html
+http://malware.wicar.org/data/ms09_072_style_object.html
+http://wicar.org/uploads/5/6/3/3/56336967/avast_orig.png
+http://malware.wicar.org/data/ms03_020_ie_objecttype.html
+http://wicar.org/uploads/5/6/3/3/56336967/543207_orig.png
+https://malware.wicar.org/data/ms09_072_style_object.html
+http://wicar.org/uploads/5/6/3/3/56336967/1582165_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/2093399_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/2526724_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/3057312_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/3425196_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/4257515_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/4522709_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/4626061_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/5384326_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/5802161_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/5867812_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/6997236_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/7352922_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/7581805_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8149933_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8378107_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/8872266_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9442983_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9749007_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/9772685_orig.jpg
+https://malware.wicar.org/data/ms03_020_ie_objecttype.html
+http://malware.wicar.org/data/ms10_090_ie_css_clip_ie6.html
+http://malware.wicar.org/data/firefox_proto_crmfrequest.html
+http://wicar.org/uploads/5/6/3/3/56336967/ipfire-block_1.jpg
+https://malware.wicar.org/data/ms10_090_ie_css_clip_ie6.html
+http://malware.wicar.org/data/ms09_002_memory_corruption.html
+https://malware.wicar.org/data/firefox_proto_crmfrequest.html
+http://wicar.org/uploads/5/6/3/3/56336967/untangle-block_2.jpg
+https://malware.wicar.org/data/ms09_002_memory_corruption.html
+http://malware.wicar.org/data/adobe_flash_hacking_team_uaf.html
+https://malware.wicar.org/data/adobe_flash_hacking_team_uaf.html
+http://wicar.org/uploads/5/6/3/3/56336967/eset-av-block2_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/open-dns-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block1_orig.jpg
+---PAGE---
+URL
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block2_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block3_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/zscaler-block4_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/watchguard-fireware_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/webroot-endpoint_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/kaspersky-browser_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/symantec-bluecoat_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/avast-premium-desktop_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/mcafee-macos-endpoint_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/trend-officescan-url_orig.jpg
+http://wicar.org/uploads/5/6/3/3/56336967/cloudflare-teams-gateway_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/watchguard-m440-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/eset-endpoint-av-block_orig.png
+http://wicar.org/uploads/5/6/3/3/56336967/fsecure-safe-2020-desktop_1.jpg
+http://wicar.org/cdn-cgi/l/email-protection#84edeae2ebc4f3ede7e5f6aaebf6e3
+http://wicar.org/cdn-cgi/l/email-protection#ec85828a83ac9b858f8d9ec2839e8b
+http://wicar.org/uploads/5/6/3/3/56336967/google-chrome-browser-block_orig.png
+http://wicar.org/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js
+http://wicar.org/uploads/5/6/3/3/56336967/editor/1-1-1-1-with-warp2.png?1625013394
+http://wicar.org/uploads/5/6/3/3/56336967/published/gryphon-mesh-wifi-router_1.png
+http://wicar.org/uploads/5/6/3/3/56336967/published/1-1-1-1-with-warp.png?1625013387
+http://wicar.org/uploads/5/6/3/3/56336967/published/mcafee-mobile-block.png?1502166695
+http://wicar.org/cdn-cgi/l/email-protection#31465852504371565e5e565d5456435e4441421f525e5c
+http://wicar.org/cdn-cgi/l/email-protection#a3d4cac0c2d188d0d6c1d0c0d1cac1c6e3c4d1ccd6d3c4d1ccd6d3d08dc0ccce
+Blacklisted Domains (4)
+URL
+wicar.org
+github.com
+www.spycar.org
+malware.wicar.org

@@ -5,7 +5,8 @@ from app.db.base import get_db
 from app.api.assessment.schemas import SubmitAssessmentBody
 from app.api.assessment.controller import (
     submit_assessment_logic,
-    get_latest_assessment
+    get_latest_assessment,
+    get_assessment_history
 )
 
 router = APIRouter(prefix="/api/assess", tags=["assessment"])
@@ -42,3 +43,20 @@ async def get_latest_assessment_result(
         "answers": result.answers,
         "created_at": result.created_at.isoformat(),
     }
+
+
+@router.get("/history")
+async def get_assessment_history_result(
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    results = get_assessment_history(db, limit)
+
+    return [
+        {
+            "_id": str(r._id),
+            "summary": r.summary,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in results
+    ]

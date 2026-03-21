@@ -161,3 +161,12 @@ def get_latest_assessment(db: Session):
         )
 
     return result
+
+def get_assessment_history(db: Session, limit: int = 10):
+    results = (
+        db.query(AssessmentResult)
+        .order_by(AssessmentResult.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return results
