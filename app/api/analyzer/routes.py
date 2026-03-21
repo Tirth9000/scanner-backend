@@ -8,17 +8,20 @@ from app.db.models import ScanSummary,ScanResult
 from sqlalchemy.orm import Session
 router = APIRouter(prefix="/score",tags=["Scoring"])
 
-@router.post("/{scan_id}",response_model=ScanScoreResponse)
+@router.post("/{scan_id}")
 def generate_score(scan_id: str, db: Session = Depends(get_db)):
     try:
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
         if scans:
+            print("Score already exists for scan_id:", scan_id)
             return {
                 "scan_id": scans.scan_id,
                 "domain_score": scans.domain_score,
+                "host": [scans.Host] if scans.Host else [],
                 "severity": scans.severity,
-                "categorized_vulnerabilities": scans.categorized_vulnerabilities
+                "categorized_vulnerabilities": scans.categorized_vulnerabilities,
+                "ips": scans.IP or []
             }
         
         return calculate_score(scan_id, db)
@@ -29,7 +32,7 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
             detail=f"Error generating score: {str(e)}"
         )
 
-@router.get("/get_score/{scan_id}",response_model=ScanScoreResponse)
+@router.get("/get_score/{scan_id}")
 def get_score(scan_id: str, db: Session = Depends(get_db)):
     score = db.query(ScanSummary).filter(
         ScanSummary.scan_id == scan_id
