@@ -19,6 +19,7 @@ class VulnerabilityEntry(BaseModel):
 class ScanScoreResponse(BaseModel):
     scan_id: str
     domain_score: int
+    host : dict
     severity: str
     categorized_vulnerabilities: Dict[str, Dict[str, List[VulnerabilityEntry]]]
     ips: List[str]

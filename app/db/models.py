@@ -60,10 +60,10 @@ class ScanSummary(Base):
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
     domain_score = Column(Integer)
-    cvss_score = Column(Float)
+    Host = Column(JSONB)
     severity = Column(String)
     categorized_vulnerabilities = Column(JSONB)
-    category_scores = Column(JSONB)
+    IP = Column(JSONB)
 
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),
