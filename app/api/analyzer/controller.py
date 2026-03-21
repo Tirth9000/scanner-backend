@@ -492,7 +492,7 @@ def calculate_score(scan_id: str, db: Session):
     data = scan.results
     scoring = score_domain(data['data'])
     categorized = categorize_issues(scoring, data['data'])
-
+    ips_of_scan = get_ips_from_scan(data)
     new_score = ScanSummary(
         scan_id=scan_id,
         domain_score=scoring["domain_score"],
@@ -507,5 +507,17 @@ def calculate_score(scan_id: str, db: Session):
         "scan_id": scan_id,
         "domain_score": scoring["domain_score"],
         "severity": scoring["severity"],
-        "categorized_vulnerabilities": categorized
+        "categorized_vulnerabilities": categorized,
+        "ips": ips_of_scan
     }
+
+def get_ips_from_scan(data: dict):
+    ips = []
+
+    for item in data.get("data", []):
+        http_data = item.get("http_collection")
+
+        if http_data and http_data.get("ip"):
+            ips.append(http_data["ip"])
+        ips = list(set(ips))
+    return ips

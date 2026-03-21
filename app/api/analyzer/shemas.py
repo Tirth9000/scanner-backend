@@ -20,6 +20,7 @@ class ScanScoreResponse(BaseModel):
     domain_score: int
     severity: str
     categorized_vulnerabilities: Dict[str, Dict[str, List[VulnerabilityEntry]]]
+    ips: List[str]
 
     class Config:
         from_attributes = True
