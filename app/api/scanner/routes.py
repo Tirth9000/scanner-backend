@@ -55,12 +55,24 @@ def get_scan_history(db: Session = Depends(get_db)):
         .all()
     
     history = []
+    import datetime
     for req, summary in results:
+        is_stuck = False
+        if not summary and req.time:
+            time_diff = datetime.datetime.utcnow() - req.time
+            if time_diff.total_seconds() > 900:  # 15 minutes
+                is_stuck = True
+                
+        if summary:
+            status = "Healthy" if summary.domain_score >= 80 else ("Warning" if summary.domain_score >= 60 else "Critical")
+        else:
+            status = "Failed" if is_stuck else "Pending"
+
         history.append({
             "scan_id": req.scan_id,
             "domain": req.domain,
             "time": req.time.isoformat() if req.time else None,
             "score": summary.domain_score if summary else 0,
-            "status": "Healthy" if summary and summary.domain_score >= 80 else ("Warning" if summary and summary.domain_score >= 60 else "Critical") if summary else "Pending"
+            "status": status
         })
     return history
