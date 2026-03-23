@@ -18,6 +18,13 @@ def create_scan_task_to_queue(db: Session, data: RequestScanTask):
     # Strip path or trailing slash (e.g., example.com/path -> example.com)
     target = target.split("/")[0]
 
+    import socket
+    try:
+        socket.gethostbyname(target)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="No such domain found. Please enter a valid, existing domain.")
+
+
     try:
         scan_id = str(uuid.uuid4())
 

@@ -31,11 +31,10 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
                     "ips": scans.ips or []
                 }
             else:
-                # Stale cache — delete and re-generate with IP reputation
+                # Stale cache — re-generate with IP reputation, db.merge will handle updates safely
                 print("Stale cache detected for scan_id:", scan_id, "- re-generating with IP reputation")
-                db.delete(scans)
-                db.commit()
         
+
         return calculate_score(scan_id, db)
     
     except Exception as e:
@@ -48,10 +47,7 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
 def force_rescore(scan_id: str, db: Session = Depends(get_db)):
     """Force re-generation of score with latest analysis logic (including IP reputation)."""
     try:
-        existing = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
-        if existing:
-            db.delete(existing)
-            db.commit()
+
         return calculate_score(scan_id, db)
     except Exception as e:
         raise HTTPException(

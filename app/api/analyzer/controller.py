@@ -1,5 +1,6 @@
 from collections import defaultdict
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from app.db.models import ScanSummary, ScanResult
 from app.db.base import get_db
@@ -358,8 +359,13 @@ def calculate_score(scan_id: str, db: Session):
         ips=ips_of_scan
     )
 
-    db.add(new_summary)
-    db.commit()
+    try:
+        db.merge(new_summary)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        print(f"Skipping insert for {scan_id} due to concurrent update (IntegrityError)")
+
     return {
         "scan_id": scan_id,
         "domain_score": scoring["domain_score"],

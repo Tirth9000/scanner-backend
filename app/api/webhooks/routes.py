@@ -57,6 +57,13 @@ async def scan_result_webhook(
         scan.results = body
         db.commit()
 
+        # Trigger the analyzer to create the ScanSummary exactly when scan is finished
+        try:
+            from app.api.analyzer.controller import calculate_score
+            calculate_score(scan_id, db)
+        except Exception as e:
+            print(f"Error calculating score for {scan_id} in webhook: {e}")
+
         return {"status": "ok"}
     except HTTPException:
         raise
