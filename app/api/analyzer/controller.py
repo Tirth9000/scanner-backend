@@ -37,24 +37,30 @@ CATEGORY_RULES = {
 }
 
 
-def evaluate_dns(dns):
+def evaluate_dns(dns, is_root=False, has_mail_service=False):
     penalty = 0
     issues = []
 
     if not dns:
         return penalty, issues
 
+    if not is_root:
+        return penalty, issues
+
+    # NS check always on root
     if not dns.get("ns"):
         penalty += 2
         issues.append("Missing NS record")
 
-    if not dns.get("txt"):
-        penalty += 1
-        issues.append("Missing TXT record")
+    # MX and TXT only if domain has mail service
+    if has_mail_service:
+        if not dns.get("mx"):
+            penalty += 2
+            issues.append("Missing MX record")
 
-    if not dns.get("mx"):
-        penalty += 1
-        issues.append("Missing MX record")
+        if not dns.get("txt"):
+            penalty += 1
+            issues.append("Missing TXT record")
 
     return penalty, issues
 
@@ -158,7 +164,7 @@ def get_cvss_severity(score):
         "severity": severity
     }
 
-def score_subdomain(asset):
+def score_subdomain(asset, root_domain=None, has_mail_service=False):
     score = START_SCORE
     issues = []
 
@@ -166,7 +172,10 @@ def score_subdomain(asset):
     http = asset.get("http_collection")
     ports = asset.get("port_collection", [])
 
-    dns_pen, dns_issues = evaluate_dns(dns)
+    subdomain = asset.get("subdomain", "")
+    is_root = (subdomain == root_domain)
+
+    dns_pen, dns_issues = evaluate_dns(dns, is_root=is_root, has_mail_service=has_mail_service)
     score -= dns_pen
     issues.extend(dns_issues)
 
@@ -192,12 +201,12 @@ def score_subdomain(asset):
     }
 
 
-def score_domain(data):
+def score_domain(data, root_domain=None, has_mail_service=False):
     results = []
     scores = []
 
     for asset in data:
-        r = score_subdomain(asset)
+        r = score_subdomain(asset, root_domain=root_domain, has_mail_service=has_mail_service)
         results.append(r)
         scores.append(r["score"])
 
@@ -271,12 +280,24 @@ def calculate_score(scan_id: str, db: Session):
     host = data.get("data", {}).get("host", {})
     subdomains = data.get("data", {}).get("subdomains", [])
 
+    # Detect mail service
+    mail_security = host.get("mail_security", {})
+    has_mail_service = bool(
+        mail_security.get("spf") or
+        mail_security.get("dkim") or
+        mail_security.get("mx")
+    )
+    root_domain = host.get("domain")
+
     print("Host type:", type(host))
     print("Subdomains count:", len(subdomains))
+    print("Has mail service:", has_mail_service)
+    print("Root domain:", root_domain)
 
-    scoring = score_domain(subdomains)
+    scoring = score_domain(subdomains, root_domain=root_domain, has_mail_service=has_mail_service)
     categorized = categorize_issues(scoring, subdomains)
     ips_of_scan = get_ips_from_scan(subdomains)
+
     new_summary = ScanSummary(
         scan_id=scan_id,
         domain_score=scoring["domain_score"],
@@ -288,6 +309,7 @@ def calculate_score(scan_id: str, db: Session):
 
     db.add(new_summary)
     db.commit()
+
     return {
         "scan_id": scan_id,
         "domain_score": scoring["domain_score"],
