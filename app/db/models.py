@@ -68,3 +68,13 @@ class ScanSummary(Base):
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),
     )
+
+
+class Temp(Base):
+    __tablename__ = "temp"
+
+    _id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_id = Column(String(36), nullable=False)
+    domain = Column(Text, nullable=False)
+    fix_type = Column(String, nullable=False)
+    result = Column(JSONB, nullable=False)
