@@ -5,6 +5,7 @@ from app.core.redis_queue import RedisClient
 from app.api.fix.schemas import FixRequest, FixResponse, FixResultRequest
 from app.db.base import get_db
 from app.db.models import Temp
+from app.api.webhooks.websocket_manager import connections
 
 router = APIRouter(prefix="/api/fix", tags=["Fix"])
 
@@ -30,7 +31,7 @@ def submit_fix(request: FixRequest):
 
 
 @router.post("/result", response_model=FixResponse)
-def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
+async def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
     try:
         fix_result = Temp(
             scan_id=request.scan_id,
@@ -46,6 +47,26 @@ def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
             status_code=500,
             detail="Failed to store fix result"
         )
+
+    ws = connections.get(request.scan_id)
+    if ws:
+        # Non-blocking notification to the frontend; failure shouldn't break the HTTP response.
+        try:
+            await ws.send_json({
+                "event": "fix_result",
+                "scan_id": request.scan_id,
+                "fix_type": request.fix_type,
+                "result": request.result,
+            })
+        except Exception:
+            pass
+        finally:
+            # Close the socket after sending the result, so the frontend can clean up.
+            connections.pop(request.scan_id, None)
+            try:
+                await ws.close()
+            except Exception:
+                pass
 
     return FixResponse(
         message="Fix result stored successfully",
