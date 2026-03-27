@@ -59,12 +59,15 @@ class ScanSummary(Base):
     __tablename__ = "scan_summary"
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
+    domain = Column(Text, nullable=False)
     domain_score = Column(Integer)
-    cvss_score = Column(Float)
     severity = Column(String)
-    categorized_vulnerabilities = Column(JSONB)
-    category_scores = Column(JSONB)
-    ips = Column(JSONB, default=[])
+    mail_security = Column(JSONB, nullable=True)
+    app_security = Column(JSONB, nullable=True)
+    network_security = Column(JSONB, nullable=True)
+    tls_security = Column(JSONB, nullable=True)
+    dns_security = Column(JSONB, nullable=True)
+    ips = Column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),

@@ -1,12 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
-from app.api.analyzer.shemas import ScanScoreResponse
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
-from app.db.models import ScanSummary,ScanResult
-from sqlalchemy.orm import Session
-router = APIRouter(prefix="/score",tags=["Scoring"])
+from app.db.models import ScanSummary, ScanResult
+
+router = APIRouter(prefix="/api/score",tags=["Scoring"])
+
+
+def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
+    categorized = {}
+
+    if scans.app_security:
+        categorized["Application Security"] = scans.app_security
+    if scans.network_security:
+        categorized["Network Security"] = scans.network_security
+    if scans.tls_security:
+        categorized["TLS Security"] = scans.tls_security
+    if scans.dns_security:
+        categorized["DNS Security"] = scans.dns_security
+
+    return categorized
+
 
 @router.post("/{scan_id}")
 def generate_score(scan_id: str, db: Session = Depends(get_db)):
@@ -14,27 +28,19 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
         if scans:
-            # Check if this is a stale cache (missing IP reputation data)
-            has_ip_reputation = False
-            if scans.categorized_vulnerabilities:
-                has_ip_reputation = "IP Reputation" in scans.categorized_vulnerabilities
-            
-            if has_ip_reputation:
-                print("Score already exists for scan_id:", scan_id)
-                return {
-                    "scan_id": scans.scan_id,
-                    "domain_score": scans.domain_score,
-                    "category_scores": scans.category_scores or {},
-                    "host": {},
-                    "severity": scans.severity,
-                    "categorized_vulnerabilities": scans.categorized_vulnerabilities,
-                    "ips": scans.ips or []
-                }
-            else:
-                # Stale cache — re-generate with IP reputation, db.merge will handle updates safely
-                print("Stale cache detected for scan_id:", scan_id, "- re-generating with IP reputation")
+            print("Score already exists for scan_id:", scan_id)
+            return {
+                "scan_id": scans.scan_id,
+                "domain_score": scans.domain_score,
+                "host": {
+                    "domain": scans.domain,
+                    "mail_security": scans.mail_security or {}
+                },
+                "severity": scans.severity,
+                "categorized_vulnerabilities": build_categorized_vulnerabilities(scans),
+                "ips": scans.ips or []
+            }
         
-
         return calculate_score(scan_id, db)
     
     except Exception as e:
@@ -66,7 +72,17 @@ def get_score(scan_id: str, db: Session = Depends(get_db)):
             status_code=404,
             detail="Score not found. Generate it first."
         )
-    return score
+    return {
+        "scan_id": score.scan_id,
+        "domain_score": score.domain_score,
+        "host": {
+            "domain": score.domain,
+            "mail_security": score.mail_security or {}
+        },
+        "severity": score.severity,
+        "categorized_vulnerabilities": build_categorized_vulnerabilities(score),
+        "ips": score.ips or []
+    }
 
 @router.get("/get_raw_data/{scan_id}")
 def get_raw_data(scan_id: str, db: Session = Depends(get_db)):

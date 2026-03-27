@@ -5,9 +5,9 @@ from fastapi import Depends, HTTPException
 from app.db.base import get_db
 from app.db.models import ScanRequest,ScanResult
 
-router = APIRouter(prefix='/webhooks')
-
 connections = {}
+
+router = APIRouter(prefix='/webhooks')
 @router.websocket("/ws/{scan_id}")
 async def websocket_endpoint(websocket: WebSocket, scan_id: str):
     await websocket.accept()
