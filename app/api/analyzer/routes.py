@@ -59,7 +59,17 @@ def get_score(scan_id: str, db: Session = Depends(get_db)):
             status_code=404,
             detail="Score not found. Generate it first."
         )
-    return score
+    return {
+        "scan_id": score.scan_id,
+        "domain_score": score.domain_score,
+        "host": {
+            "domain": score.domain,
+            "mail_security": score.mail_security or {}
+        },
+        "severity": score.severity,
+        "categorized_vulnerabilities": build_categorized_vulnerabilities(score),
+        "ips": score.ips or []
+    }
 
 @router.get("/get_raw_data/{scan_id}")
 def get_raw_data(scan_id: str, db: Session = Depends(get_db)):
