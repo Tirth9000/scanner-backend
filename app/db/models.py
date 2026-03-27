@@ -59,22 +59,16 @@ class ScanSummary(Base):
     __tablename__ = "scan_summary"
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
+    domain = Column(Text, nullable=False)
     domain_score = Column(Integer)
-    Host = Column(JSONB)
     severity = Column(String)
-    categorized_vulnerabilities = Column(JSONB)
-    IP = Column(JSONB)
+    mail_security = Column(JSONB, nullable=True)
+    app_security = Column(JSONB, nullable=True)
+    network_security = Column(JSONB, nullable=True)
+    tls_security = Column(JSONB, nullable=True)
+    dns_security = Column(JSONB, nullable=True)
+    ips = Column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),
     )
-
-
-class Temp(Base):
-    __tablename__ = "temp"
-
-    _id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    scan_id = Column(String(36), nullable=False)
-    domain = Column(Text, nullable=False)
-    fix_type = Column(String, nullable=False)
-    result = Column(JSONB, nullable=False)

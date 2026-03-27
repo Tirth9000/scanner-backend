@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 from app.db.base import get_db
 from app.db.models import ScanRequest,ScanResult
-from app.api.webhooks.websocket_manager import connections
+
+connections = {}
 
 router = APIRouter(prefix='/webhooks')
 @router.websocket("/ws/{scan_id}")

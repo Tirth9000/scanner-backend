@@ -12,6 +12,7 @@ class FixRequest(BaseModel):
 class FixResponse(BaseModel):
     message: str
     scan_id: str
+    reload: bool = False
 
 
 class FixResultRequest(BaseModel):
