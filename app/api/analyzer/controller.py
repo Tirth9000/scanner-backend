@@ -2,7 +2,6 @@ from collections import defaultdict
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.db.models import ScanSummary, ScanResult
-from app.db.base import get_db
 
 START_SCORE = 100
 
@@ -267,6 +266,64 @@ def categorize_issues(results, raw_data):
                             categorized[category][pattern].append(entry)
     return categorized
 
+def evaluate_dns_security(host: dict, subdomains: list[dict]) -> dict:
+    findings = defaultdict(list)
+    root_domain = host.get("domain")
+    mail_security = host.get("mail_security", {})
+
+    root_sub = next(
+        (s for s in subdomains if s.get("subdomain") == root_domain),
+        None,
+    )
+    if not root_sub:
+        return {}
+
+    dns = root_sub.get("dns_collection") or {}
+    ip = (dns.get("a") or [None])[0]
+    base = {"subdomain": root_domain, "ip": ip}
+
+    txt_records = dns.get("txt") or []
+    spf_count = sum(
+        1 for t in txt_records if isinstance(t, str) and t.startswith("v=spf1")
+    )
+    if spf_count > 1:
+        findings["Duplicate SPF record"].append({**base, "severity": "Medium"})
+
+    spf = mail_security.get("spf", {})
+    if spf.get("exists") and spf.get("policy") == "soft":
+        findings["Weak SPF policy"].append({**base, "severity": "Low"})
+
+    if not spf.get("exists"):
+        findings["Missing SPF record"].append({**base, "severity": "High"})
+
+    dmarc = mail_security.get("dmarc", {})
+    if not dmarc.get("exists"):
+        findings["Missing DMARC"].append({**base, "severity": "High"})
+
+    if dmarc.get("exists") and dmarc.get("policy") in ("none", "quarantine"):
+        findings["Weak DMARC policy"].append({**base, "severity": "Medium"})
+
+    dkim = mail_security.get("dkim", {})
+    if not dkim.get("exists"):
+        findings["Missing DKIM"].append({**base, "severity": "Medium"})
+
+    ns = dns.get("ns")
+    if not ns:
+        findings["Missing NS record"].append({**base, "severity": "High"})
+
+    return dict(findings)
+
+
+def _to_plain_dict(value):
+    if not value:
+        return {}
+    return {
+        check: findings
+        for check, findings in value.items()
+        if findings
+    }
+
+
 def calculate_score(scan_id: str, db: Session):
     scan = db.query(ScanResult).filter(
         ScanResult.scan_id == scan_id
@@ -296,15 +353,40 @@ def calculate_score(scan_id: str, db: Session):
 
     scoring = score_domain(subdomains, root_domain=root_domain, has_mail_service=has_mail_service)
     categorized = categorize_issues(scoring, subdomains)
+
+    dns_security = evaluate_dns_security(host, subdomains)
+    if dns_security:
+        for check_name, check_findings in dns_security.items():
+            categorized["DNS Security"][check_name] = check_findings
+
+    app_security = _to_plain_dict(categorized.get("Application Security"))
+    network_security = _to_plain_dict(categorized.get("Network Security"))
+    tls_security = _to_plain_dict(categorized.get("TLS Security"))
+    dns_security = _to_plain_dict(categorized.get("DNS Security"))
+
+    categorized_vulnerabilities = {}
+    if app_security:
+        categorized_vulnerabilities["Application Security"] = app_security
+    if network_security:
+        categorized_vulnerabilities["Network Security"] = network_security
+    if tls_security:
+        categorized_vulnerabilities["TLS Security"] = tls_security
+    if dns_security:
+        categorized_vulnerabilities["DNS Security"] = dns_security
+
     ips_of_scan = get_ips_from_scan(subdomains)
 
     new_summary = ScanSummary(
         scan_id=scan_id,
+        domain=root_domain or scan.domain,
         domain_score=scoring["domain_score"],
         severity=scoring["severity"],
-        Host=host,
-        categorized_vulnerabilities=categorized,
-        IP=ips_of_scan
+        mail_security=mail_security,
+        app_security=app_security or None,
+        network_security=network_security or None,
+        tls_security=tls_security or None,
+        dns_security=dns_security or None,
+        ips=ips_of_scan
     )
 
     db.add(new_summary)
@@ -315,7 +397,7 @@ def calculate_score(scan_id: str, db: Session):
         "domain_score": scoring["domain_score"],
         "host": host,
         "severity": scoring["severity"],
-        "categorized_vulnerabilities": categorized,
+        "categorized_vulnerabilities": categorized_vulnerabilities,
         "ips": ips_of_scan
     }
 

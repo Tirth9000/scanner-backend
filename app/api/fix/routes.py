@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.core.redis_queue import RedisClient
 from app.api.fix.schemas import FixRequest, FixResponse, FixResultRequest
 from app.db.base import get_db
-from app.db.models import Temp
 from app.api.webhooks.websocket_manager import connections
 
 router = APIRouter(prefix="/api/fix", tags=["Fix"])

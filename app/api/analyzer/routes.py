@@ -1,12 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
-from app.api.analyzer.shemas import ScanScoreResponse
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
-from app.db.models import ScanSummary,ScanResult
-from sqlalchemy.orm import Session
-router = APIRouter(prefix="/score",tags=["Scoring"])
+from app.db.models import ScanSummary, ScanResult
+
+router = APIRouter(prefix="/api/score",tags=["Scoring"])
+
+
+def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
+    categorized = {}
+
+    if scans.app_security:
+        categorized["Application Security"] = scans.app_security
+    if scans.network_security:
+        categorized["Network Security"] = scans.network_security
+    if scans.tls_security:
+        categorized["TLS Security"] = scans.tls_security
+    if scans.dns_security:
+        categorized["DNS Security"] = scans.dns_security
+
+    return categorized
+
 
 @router.post("/{scan_id}")
 def generate_score(scan_id: str, db: Session = Depends(get_db)):
@@ -18,10 +32,13 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
             return {
                 "scan_id": scans.scan_id,
                 "domain_score": scans.domain_score,
-                "host": [scans.Host] if scans.Host else [],
+                "host": {
+                    "domain": scans.domain,
+                    "mail_security": scans.mail_security or {}
+                },
                 "severity": scans.severity,
-                "categorized_vulnerabilities": scans.categorized_vulnerabilities,
-                "ips": scans.IP or []
+                "categorized_vulnerabilities": build_categorized_vulnerabilities(scans),
+                "ips": scans.ips or []
             }
         
         return calculate_score(scan_id, db)
