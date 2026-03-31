@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
 from app.db.models import ScanSummary, ScanResult
+from app.core.middleware import protect
 
 router = APIRouter(prefix="/api/score",tags=["Scoring"])
 
@@ -22,8 +23,12 @@ def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
     return categorized
 
 
-@router.post("/{scan_id}")
-def generate_score(scan_id: str, db: Session = Depends(get_db)):
+@router.get("/{scan_id}")
+def generate_score(
+    scan_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
+):
     try:
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
@@ -41,7 +46,7 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
                 "ips": scans.ips or []
             }
         
-        return calculate_score(scan_id, db)
+        return calculate_score(scan_id, db, user_id=current_user["user_id"])
     
     except Exception as e:
         raise HTTPException(
@@ -50,7 +55,11 @@ def generate_score(scan_id: str, db: Session = Depends(get_db)):
         )
 
 @router.get("/get_score/{scan_id}")
-def get_score(scan_id: str, db: Session = Depends(get_db)):
+def get_score(
+    scan_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
+):
     score = db.query(ScanSummary).filter(
         ScanSummary.scan_id == scan_id
     ).first()
@@ -72,7 +81,11 @@ def get_score(scan_id: str, db: Session = Depends(get_db)):
     }
 
 @router.get("/get_raw_data/{scan_id}")
-def get_raw_data(scan_id: str, db: Session = Depends(get_db)):
+def get_raw_data(
+    scan_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
+):
     score = db.query(ScanResult).filter(
         ScanResult.scan_id == scan_id
     ).first()
@@ -84,6 +97,13 @@ def get_raw_data(scan_id: str, db: Session = Depends(get_db)):
     return score.results
 
 @router.get("/get_all")
-def get_all_scores(db: Session = Depends(get_db)):
-    scores = db.query(ScanResult).all()
+def get_all_scores(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
+):
+    """Return only scan IDs belonging to the current user."""
+    scores = db.query(ScanResult).filter(
+        ScanResult.user_id == current_user["user_id"]
+    ).all()
+
     return [score.scan_id for score in scores]

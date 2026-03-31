@@ -324,7 +324,7 @@ def _to_plain_dict(value):
     }
 
 
-def calculate_score(scan_id: str, db: Session):
+def calculate_score(scan_id: str, db: Session, user_id: str = None):
     scan = db.query(ScanResult).filter(
         ScanResult.scan_id == scan_id
     ).first()
@@ -378,6 +378,7 @@ def calculate_score(scan_id: str, db: Session):
 
     new_summary = ScanSummary(
         scan_id=scan_id,
+        user_id=user_id,
         domain=root_domain or scan.domain,
         domain_score=scoring["domain_score"],
         severity=scoring["severity"],
