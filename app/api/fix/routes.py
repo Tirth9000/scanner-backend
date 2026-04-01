@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.redis_queue import RedisClient
 from app.core.middleware import protect
 from app.db.base import get_db
-from app.api.fix.schemas import FixRequest, FixResponse, FixResultRequest
+from app.api.fix.schemas import FixRequest, FixSubmitResponse, FixResultRequest, FixResultResponse
 from app.api.fix.service import apply_fix_result
 
 router = APIRouter(prefix="/api/fix", tags=["Fix"])
@@ -14,7 +14,7 @@ redis_client = RedisClient()
 QUEUE_NAME = "fix_queue"
 
 
-@router.post("/submit", response_model=FixResponse)
+@router.post("/submit", response_model=FixSubmitResponse)
 def submit_fix(request: FixRequest, current_user: dict = Depends(protect)):
     try:
         redis_client.redis.rpush(QUEUE_NAME, json.dumps(request.model_dump()))
@@ -24,13 +24,13 @@ def submit_fix(request: FixRequest, current_user: dict = Depends(protect)):
             detail="Redis connection failed. Please try again later."
         )
 
-    return FixResponse(
+    return FixSubmitResponse(
         message="Fix request queued successfully",
         scan_id=request.scan_id,
     )
 
 
-@router.post("/result", response_model=FixResponse)
+@router.post("/result", response_model=FixResultResponse)
 def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
     try:
         fix_result = apply_fix_result(
@@ -47,7 +47,7 @@ def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
             detail="Failed to update scan summary after fix result"
         )
 
-    return FixResponse(
+    return FixResultResponse(
         message="Fix result stored successfully",
         scan_id=request.scan_id,
         domain_score=fix_result["domain_score"],
