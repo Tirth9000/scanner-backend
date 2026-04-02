@@ -3,11 +3,11 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-# from app.api.auth.routes import router as auth_router
+from app.api.auth.routes import router as auth_router
 from app.api.scanner.routes import router as scanner_router
 from app.db.create_db import init_db
 from app.db.init_db import init_tables
-from app.api.scanner.routes import router as scanner_router
+
 from app.api.webhooks.routes import router as webhook_scanner_router
 from app.api.assessment.routes import router as assessment_router
 from app.api.questions.routes import router as questions_router
@@ -46,7 +46,7 @@ app.add_middleware(
 )
 
 # routes
-# app.include_router(auth_router)
+app.include_router(auth_router)
 app.include_router(scanner_router)
 app.include_router(webhook_scanner_router)
 app.include_router(assessment_router)

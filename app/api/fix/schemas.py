@@ -9,11 +9,16 @@ class FixRequest(BaseModel):
     data: Any
 
 
-class FixResponse(BaseModel):
+class FixSubmitResponse(BaseModel):
     message: str
     scan_id: str
-    domain_score: Optional[int] = None
-    severity: Optional[str] = None
+
+
+class FixResultResponse(BaseModel):
+    message: str
+    scan_id: str
+    domain_score: int
+    severity: str
 
 
 class FixResultRequest(BaseModel):

@@ -23,21 +23,21 @@ def protect(
 
         # 1️⃣ Verify token
         decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        user_id = decoded.get("id")
+        user_id = decoded.get("user_id")
 
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
 
         # 2️⃣ Fetch user using ORM
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(User).filter(User.user_id == user_id).first()
 
         if not user:
             raise HTTPException(status_code=401, detail="Not authorized, user not found")
 
         return {
-            "id": user.id,
-            "username": user.username,
+            "user_id": user.user_id,
             "email": user.email,
+            "domain": user.domain,
         }
 
     except JWTError as error:
