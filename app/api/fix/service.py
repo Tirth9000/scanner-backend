@@ -85,9 +85,14 @@ def is_fix_successful(result) -> bool:
         for key in ("success", "is_success", "fixed"):
             if key in result:
                 return bool(result[key])
-        status = str(result.get("status", "")).strip().lower()
-        if status:
-            return status in {"success", "succeeded", "ok"}
+        
+        status = result.get("status")
+        if isinstance(status, bool):
+            return status
+            
+        status_str = str(status).strip().lower()
+        if status_str:
+            return status_str in {"success", "succeeded", "ok", "true"}
     return False
 
 

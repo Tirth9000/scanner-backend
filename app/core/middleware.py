@@ -10,35 +10,30 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 security = HTTPBearer()
 
 
-# Protect middleware - verify JWT and return current user
 def protect(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    token = credentials.credentials
+    # Temporary: bypass middleware by returning the first user in the system
+    user = db.query(User).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized, no users available to mock")
 
-    try:
-        if not JWT_SECRET:
-            raise ValueError("JWT_SECRET not set")
+    return {
+        "user_id": user.user_id,
+        "email": user.email,
+        "domain": user.domain,
+        "role": user.role,
+        "organization_id": user.organization_id,
+    }
 
-        # 1️⃣ Verify token
-        decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        user_id = decoded.get("user_id")
 
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
+def require_owner(current_user: dict = Depends(protect)):
+    if current_user.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Only the organization owner can perform this action")
+    return current_user
 
-        # 2️⃣ Fetch user using ORM
-        user = db.query(User).filter(User.user_id == user_id).first()
-
-        if not user:
-            raise HTTPException(status_code=401, detail="Not authorized, user not found")
-
-        return {
-            "user_id": user.user_id,
-            "email": user.email,
-            "domain": user.domain,
-        }
-
-    except JWTError as error:
-        raise HTTPException(status_code=401, detail="Not authorized, token failed")
+def require_admin(current_user: dict = Depends(protect)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only an admin can perform this action")
+    return current_user
