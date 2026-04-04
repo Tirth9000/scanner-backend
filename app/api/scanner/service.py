@@ -16,13 +16,11 @@ def create_scan_task_to_queue(db: Session, domain: str, user_id: str):
 
         new_request = ScanRequest(
             scan_id=scan_id,
-            user_id=user_id,
             domain=domain
         )
 
         new_result = ScanResult(
             scan_id=scan_id,
-            user_id=user_id,
             domain=domain,
             results={
                 "status": "pending"

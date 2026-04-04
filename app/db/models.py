@@ -4,14 +4,14 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from app.db.base import Base
 
-class User(Base):
-    __tablename__ = "users"
+# class User(Base):
+#     __tablename__ = "users"
 
-    user_id = Column(String(36), primary_key=True)
-    email = Column(String(255), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    domain = Column(Text, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
+#     user_id = Column(String(36), primary_key=True)
+#     email = Column(String(255), unique=True, nullable=False)
+#     password = Column(String(255), nullable=False)
+#     domain = Column(Text, nullable=False)
+#     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Question(Base):
     __tablename__ = "questions"
@@ -36,7 +36,7 @@ class ScanRequest(Base):
     __tablename__ = "scan_request"
 
     scan_id = Column(String(36), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    # user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
     domain = Column(Text, nullable=False)
     time = Column(TIMESTAMP, server_default=func.now())
     data = Column(JSONB, nullable=True)
@@ -49,7 +49,7 @@ class ScanResult(Base):
     __tablename__ = "scan_result"
 
     scan_id = Column(String(36),ForeignKey("scan_request.scan_id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    # user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
     domain = Column(Text, nullable=False) 
     results = Column(JSONB, nullable=False)
 
@@ -61,7 +61,7 @@ class ScanSummary(Base):
     __tablename__ = "scan_summary"
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    # user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
     domain = Column(Text, nullable=False)
     domain_score = Column(Integer)
     severity = Column(String)

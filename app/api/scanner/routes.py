@@ -3,23 +3,20 @@ from app.api.scanner.service import create_scan_task_to_queue
 from app.core.redis_queue import RedisClient
 from app.core.middleware import protect
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from app.db.base import get_db
 import json
 from app.db.models import ScanResult, ScanRequest
 
 redis_client = RedisClient()
 
-router = APIRouter(prefix='/api/scanner', tags=["scanner"])
+router = APIRouter(prefix='/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
-async def register_scan_task(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+async def register_scan_task(domain: str,
+    db: Session = Depends(get_db)
 ):
-    # Domain is taken directly from the user's registered domain in DB
-    domain = current_user["domain"]
-    return create_scan_task_to_queue(db, domain, current_user["user_id"])
-
+    return create_scan_task_to_queue(db,domain)
 
 # for testing purpose only, to check the scan queue in redis
 @router.get("/scanlist")
@@ -35,12 +32,10 @@ async def clear_scan_queue():
 @router.get("/scan-result")
 def get_scan_result(
     scan_id: str,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+    db: Session = Depends(get_db)
 ):
     scan = db.query(ScanResult).filter(
-        ScanResult.scan_id == scan_id,
-        ScanResult.user_id == current_user["user_id"]
+        ScanResult.scan_id == scan_id
     ).first()
 
     if not scan:
@@ -52,13 +47,13 @@ def get_scan_result(
 @router.get("/scan-history")
 def get_scan_history(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
 ):
-    """Return all scans belonging to the logged-in user."""
-    scans = db.query(ScanRequest).filter(
-        ScanRequest.user_id == current_user["user_id"]
-    ).order_by(ScanRequest.time.desc()).all()
-
+    """Return all scans"""
+    scans = (
+        db.query(ScanRequest)
+        .order_by(desc(ScanRequest.time))
+        .all()
+    )
     return [
         {
             "scan_id": s.scan_id,

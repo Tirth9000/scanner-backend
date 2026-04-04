@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+class ScanRequest(BaseModel):
+    domain: str
 
 class RegisterScannerRequest(BaseModel):
     scan_id: str
