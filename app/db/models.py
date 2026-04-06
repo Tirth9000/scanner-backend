@@ -4,14 +4,14 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from app.db.base import Base
 
-# class User(Base):
-#     __tablename__ = "users"
+class User(Base):
+    __tablename__ = "users"
 
-#     user_id = Column(String(36), primary_key=True)
-#     email = Column(String(255), unique=True, nullable=False)
-#     password = Column(String(255), nullable=False)
-#     domain = Column(Text, nullable=False)
-#     created_at = Column(TIMESTAMP, server_default=func.now())
+    user_id = Column(String(36), primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    domain = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Question(Base):
     __tablename__ = "questions"

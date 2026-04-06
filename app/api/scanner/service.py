@@ -9,7 +9,7 @@ from app.db.models import ScanResult, ScanRequest
 redis_client = RedisClient()
 
 
-def create_scan_task_to_queue(db: Session, domain: str, user_id: str):
+def create_scan_task_to_queue(db: Session, domain: str):
 
     try:
         scan_id = str(uuid.uuid4())
