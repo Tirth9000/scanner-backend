@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.redis_queue import RedisClient
-from app.core.middleware import protect
+# from app.core.middleware import protect
 from app.db.base import get_db
 from app.api.fix.schemas import FixRequest, FixSubmitResponse, FixResultRequest, FixResultResponse
 from app.api.fix.service import apply_fix_result
@@ -15,7 +15,7 @@ QUEUE_NAME = "fix_queue"
 
 
 @router.post("/submit", response_model=FixSubmitResponse)
-def submit_fix(request: FixRequest, current_user: dict = Depends(protect)):
+def submit_fix(request: FixRequest):
     try:
         redis_client.redis.rpush(QUEUE_NAME, json.dumps(request.model_dump()))
     except Exception:
@@ -30,7 +30,7 @@ def submit_fix(request: FixRequest, current_user: dict = Depends(protect)):
     )
 
 
-@router.post("/result", response_model=FixResultResponse)
+@router.post("/result", response_model=FixResultRequest)
 def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
     try:
         fix_result = apply_fix_result(
