@@ -72,7 +72,7 @@ class ScanRequest(Base):
     __tablename__ = "scan_request"
 
     scan_id = Column(String(36), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    # user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
     domain = Column(Text, nullable=False)
     time = Column(TIMESTAMP, server_default=func.now())
     data = Column(JSONB, nullable=True)
@@ -99,7 +99,7 @@ class ScanSummary(Base):
     __tablename__ = "scan_summary"
 
     scan_id = Column(String, ForeignKey("scan_result.scan_id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    # user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
     domain = Column(Text, nullable=False)
     domain_score = Column(Integer)
     severity = Column(String)

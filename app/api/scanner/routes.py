@@ -3,6 +3,7 @@ from app.api.scanner.service import create_scan_task_to_queue
 from app.core.redis_queue import RedisClient
 from app.core.middleware import protect
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from app.db.base import get_db
 import json
 from app.db.models import ScanResult, ScanRequest, User, Organization
@@ -10,16 +11,17 @@ from app.api.scanner.schemas import ScanTaskRequest, ScanHistoryRequest
 
 redis_client = RedisClient()
 
-router = APIRouter(prefix='/api/scanner', tags=["scanner"])
+router = APIRouter(prefix='/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
 async def register_scan_task(
-    request: ScanTaskRequest,
-    db: Session = Depends(get_db)
+    domain: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
 ):
-    domain = request.domain
-    user_id = request.user_id
-    return create_scan_task_to_queue(db, domain, user_id)
+    # Domain is taken directly from the user's registered domain in DB
+    domain = domain
+    return create_scan_task_to_queue(db, domain, current_user["user_id"])
 
 
 # for testing purpose only, to check the scan queue in redis
@@ -60,6 +62,14 @@ def get_scan_result(
 
 @router.post("/scan-history")
 def get_scan_history(
+    db: Session = Depends(get_db),
+):
+    """Return all scans"""
+    scans = (
+        db.query(ScanRequest)
+        .order_by(desc(ScanRequest.time))
+        .all()
+    )
     req: ScanHistoryRequest,
     db: Session = Depends(get_db)
 ):
