@@ -13,11 +13,12 @@ router = APIRouter(prefix='/api/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
 async def register_scan_task(
+    domain: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(protect)
 ):
     # Domain is taken directly from the user's registered domain in DB
-    domain = current_user["domain"]
+    domain = domain
     return create_scan_task_to_queue(db, domain, current_user["user_id"])
 
 
