@@ -15,7 +15,10 @@ QUEUE_NAME = "fix_queue"
 
 
 @router.post("/submit", response_model=FixSubmitResponse)
-def submit_fix(request: FixRequest):
+def submit_fix(request: FixRequest, db: Session = Depends(get_db)):
+    from app.db.models import User
+    user = db.query(User).first()
+    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     try:
         redis_client.redis.rpush(QUEUE_NAME, json.dumps(request.model_dump()))
     except Exception:

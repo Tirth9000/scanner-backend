@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
-from app.db.models import ScanSummary, ScanResult
+from app.db.models import ScanSummary, ScanResult, ScanRequest, User
 from app.core.middleware import protect
+from app.api.analyzer.schemas import UserHistoryRequest
 
 router = APIRouter(prefix="/api/score",tags=["Scoring"])
 
@@ -23,12 +24,13 @@ def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
     return categorized
 
 
-@router.get("/{scan_id}")
+@router.get("/generate/{scan_id}")
 def generate_score(
     scan_id: str,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+    db: Session = Depends(get_db)
 ):
+    user = db.query(User).first()
+    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     try:
         scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
 
@@ -57,9 +59,10 @@ def generate_score(
 @router.get("/get_score/{scan_id}")
 def get_score(
     scan_id: str,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+    db: Session = Depends(get_db)
 ):
+    user = db.query(User).first()
+    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     score = db.query(ScanSummary).filter(
         ScanSummary.scan_id == scan_id
     ).first()
@@ -83,9 +86,10 @@ def get_score(
 @router.get("/get_raw_data/{scan_id}")
 def get_raw_data(
     scan_id: str,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+    db: Session = Depends(get_db)
 ):
+    user = db.query(User).first()
+    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     score = db.query(ScanResult).filter(
         ScanResult.scan_id == scan_id
     ).first()
@@ -96,14 +100,14 @@ def get_raw_data(
         )
     return score.results
 
-@router.get("/get_all")
+@router.post("/user_history")
 def get_all_scores(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(protect)
+    req: UserHistoryRequest,
+    db: Session = Depends(get_db)
 ):
-    """Return only scan IDs belonging to the current user."""
-    scores = db.query(ScanResult).filter(
-        ScanResult.user_id == current_user["user_id"]
-    ).all()
+    scans = db.query(ScanRequest).filter(
+        ScanRequest.user_id == req.user_id
+    ).order_by(ScanRequest.time.desc()).all()
 
-    return [score.scan_id for score in scores]
+    return [scan.scan_id for scan in scans]
+
