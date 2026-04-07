@@ -3,15 +3,13 @@ from app.api.scanner.service import create_scan_task_to_queue
 from app.core.redis_queue import RedisClient
 from app.core.middleware import protect
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from app.db.base import get_db
 import json
-from app.db.models import ScanResult, ScanRequest, User, Organization
-from app.api.scanner.schemas import ScanTaskRequest, ScanHistoryRequest
+from app.db.models import ScanResult, ScanRequest
 
 redis_client = RedisClient()
 
-router = APIRouter(prefix='/scanner', tags=["scanner"])
+router = APIRouter(prefix='/api/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
 async def register_scan_task(
@@ -20,7 +18,7 @@ async def register_scan_task(
     current_user: dict = Depends(protect)
 ):
     # Domain is taken directly from the user's registered domain in DB
-    domain = domain
+    domain = domain.strip().lower()
     return create_scan_task_to_queue(db, domain, current_user["user_id"])
 
 
@@ -38,20 +36,12 @@ async def clear_scan_queue():
 @router.get("/scan-result")
 def get_scan_result(
     scan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
 ):
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
-    # Scope by organization — all org members see the same data
-    org_id = current_user["organization_id"]
-    org_user_ids = [
-        u.user_id for u in
-        db.query(User.user_id).filter(User.organization_id == org_id).all()
-    ]
-
     scan = db.query(ScanResult).filter(
         ScanResult.scan_id == scan_id,
-        ScanResult.user_id.in_(org_user_ids)
+        ScanResult.user_id == current_user["user_id"]
     ).first()
 
     if not scan:
@@ -60,28 +50,14 @@ def get_scan_result(
     return scan.results
 
 
-@router.post("/scan-history")
+@router.get("/scan-history")
 def get_scan_history(
     db: Session = Depends(get_db),
+    current_user: dict = Depends(protect)
 ):
-    """Return all scans"""
-    scans = (
-        db.query(ScanRequest)
-        .order_by(desc(ScanRequest.time))
-        .all()
-    )
-    req: ScanHistoryRequest,
-    db: Session = Depends(get_db)
-):
-    """Return all scans belonging to the organization (all members see the same data)."""
-    org_id = req.org_id
-    org_user_ids = [
-        u.user_id for u in
-        db.query(User.user_id).filter(User.organization_id == org_id).all()
-    ]
-
+    """Return all scans belonging to the logged-in user."""
     scans = db.query(ScanRequest).filter(
-        ScanRequest.user_id.in_(org_user_ids)
+        ScanRequest.user_id == current_user["user_id"]
     ).order_by(ScanRequest.time.desc()).all()
 
     return [
