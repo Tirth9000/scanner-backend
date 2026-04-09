@@ -4,8 +4,6 @@ from typing import List
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-    domain: str
-    org_name: str
 
 class LoginRequest(BaseModel):
     email: EmailStr

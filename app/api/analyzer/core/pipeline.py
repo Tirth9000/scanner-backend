@@ -10,14 +10,14 @@ class AnalyserPipeline:
         pipeline_result = PipelineResult()
         analyser_result = AnalyserResult()
 
-        print("Running analyser pipeline with raw data:", self.raw_data)
+        # print("Running analyser pipeline with raw data:", self.raw_data)
 
         pipeline = [
             DNSScoringAnalyser(self.raw_data, self.domain),
         ]
 
         for analyser in pipeline:
-            print(f"Running analyser: {analyser.__class__.__name__}")
+            # print(f"Running analyser: {analyser.__class__.__name__}")
             category_result = analyser.run()
             # print(f"Result from {analyser.__class__.__name__}: {analyser_result}")
             pipeline_result.penalty_score += category_result.penalty_score
