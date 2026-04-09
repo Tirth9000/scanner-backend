@@ -42,7 +42,7 @@ def mapRiskToColor(risk: str) -> str:
     return "gray"
 
 
-def submit_assessment_logic(body, db: Session):
+def submit_assessment_logic(body, user_id : str, db: Session):
     answers = body.answers
     questions = db.query(Question).all()
 
@@ -136,6 +136,7 @@ def submit_assessment_logic(body, db: Session):
     }
 
     new_result = AssessmentResult(
+        user_id=user_id,
         summary=summary,
         answers=processedAnswers,
     )
@@ -147,9 +148,10 @@ def submit_assessment_logic(body, db: Session):
     return new_result
 
 
-def get_latest_assessment(db: Session):
+def get_latest_assessment(user_id: str, db: Session):
     result = (
         db.query(AssessmentResult)
+        .filter(AssessmentResult.user_id == user_id)
         .order_by(AssessmentResult.created_at.desc())
         .first()
     )
@@ -159,5 +161,4 @@ def get_latest_assessment(db: Session):
             status_code=404,
             detail="No assessment results found"
         )
-
     return result

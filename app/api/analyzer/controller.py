@@ -2,7 +2,7 @@ from collections import defaultdict
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.db.models import ScanSummary, ScanResult
-
+from sqlalchemy import desc
 START_SCORE = 100
 
 SAFE_PORTS = {80, 443, 993, 995, 465, 587}
@@ -324,19 +324,21 @@ def _to_plain_dict(value):
     }
 
 
-def calculate_score(scan_id: str, db: Session, user_id: str = None):
+def calculate_score(db: Session, user_id: str):
     scan = db.query(ScanResult).filter(
-        ScanResult.scan_id == scan_id
-    ).first()
+        ScanResult.user_id == user_id
+    ).order_by(desc(ScanResult.time)).first()
 
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
 
     data = scan.results or {}
-
-    host = data.get("data", {}).get("host", {})
-    subdomains = data.get("data", {}).get("subdomains", [])
-
+    host = data.get("host", {})
+    # print("Host data:", host)
+    # print("Type of host data:", type(host))
+    subdomains = data.get("subdomains", [])
+    # print("Subdomains:", subdomains)
+    # print("Type of subdomains:", type(subdomains))
     # Detect mail service
     mail_security = host.get("mail_security", {})
     has_mail_service = bool(
@@ -346,10 +348,10 @@ def calculate_score(scan_id: str, db: Session, user_id: str = None):
     )
     root_domain = host.get("domain")
 
-    print("Host type:", type(host))
-    print("Subdomains count:", len(subdomains))
-    print("Has mail service:", has_mail_service)
-    print("Root domain:", root_domain)
+    # print("Host type:", type(host))
+    # print("Subdomains count:", len(subdomains))
+    # print("Has mail service:", has_mail_service)
+    # print("Root domain:", root_domain)
 
     scoring = score_domain(subdomains, root_domain=root_domain, has_mail_service=has_mail_service)
     categorized = categorize_issues(scoring, subdomains)
@@ -377,16 +379,15 @@ def calculate_score(scan_id: str, db: Session, user_id: str = None):
     ips_of_scan = get_ips_from_scan(subdomains)
 
     new_summary = ScanSummary(
-        scan_id=scan_id,
         user_id=user_id,
         domain=root_domain or scan.domain,
         domain_score=scoring["domain_score"],
         severity=scoring["severity"],
         mail_security=mail_security,
-        app_security=app_security or None,
-        network_security=network_security or None,
-        tls_security=tls_security or None,
-        dns_security=dns_security or None,
+        app_security=app_security,
+        network_security=network_security,
+        tls_security=tls_security,
+        dns_security=dns_security,
         ips=ips_of_scan
     )
 
@@ -394,7 +395,7 @@ def calculate_score(scan_id: str, db: Session, user_id: str = None):
     db.commit()
 
     return {
-        "scan_id": scan_id,
+        "user_id": user_id,
         "domain_score": scoring["domain_score"],
         "host": host,
         "severity": scoring["severity"],
@@ -411,6 +412,6 @@ def get_ips_from_scan(subdomains: list):
         ip = http_data.get("ip")
         if ip:
             ips.append(ip)
-            print(f"Found IP: {ip} for subdomain: {item.get('subdomain')}")
-        print(ips)
+            # print(f"Found IP: {ip} for subdomain: {item.get('subdomain')}")
+        # print(ips)
     return list(set(ips))
