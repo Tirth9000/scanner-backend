@@ -39,11 +39,12 @@ def generate_score(
         )
 
 
-@router.get("/get_score/{user_id}")
+@router.get("/get_score")
 def get_score(
-    user_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(protect)
 ):
+    user_id = user.user_id
     score = db.query(ScanSummary).filter(
         ScanSummary.user_id == user_id
     ).last()
