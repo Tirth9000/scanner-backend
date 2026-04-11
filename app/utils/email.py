@@ -10,12 +10,9 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 
-def send_invite_email(to_email: str, invite_token: str, org_name: str, org_id: str):
-    """
-    Send an invitation email to a user with a link to join the organization.
-    Uses native SMTP (e.g. Gmail).
-    """
-    invite_link = f"{FRONTEND_URL}/invite?token={invite_token}&org_id={org_id}"
+def send_invite_email(to_email: str, plain_password: str, sender_email: str):
+
+    login_link = f"{FRONTEND_URL}/login"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -32,6 +29,10 @@ def send_invite_email(to_email: str, invite_token: str, org_name: str, org_id: s
             .btn {{ display: inline-block; background: linear-gradient(135deg, #0f3460, #533483);
                     color: #fff !important; text-decoration: none; padding: 14px 32px;
                     border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+            .credentials {{ background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 16px 0;
+                            border-left: 4px solid #0f3460; }}
+            .credentials p {{ margin: 4px 0; font-size: 14px; }}
+            .credentials strong {{ color: #1a1a2e; }}
             .footer {{ padding: 20px 32px; background: #f8f9fa; color: #888; font-size: 12px;
                        text-align: center; }}
         </style>
@@ -43,17 +44,22 @@ def send_invite_email(to_email: str, invite_token: str, org_name: str, org_id: s
             </div>
             <div class="body">
                 <p>Hello,</p>
-                <p>You've been invited to join <strong>{org_name}</strong> on Domain Scanner.</p>
-                <p>Click the button below to set up your account and get started:</p>
+                <p>You've been invited by <strong>{sender_email}</strong> to join Domain Scanner.</p>
+                <p>Your account has been created. Here are your login credentials:</p>
+                <div class="credentials">
+                    <p><strong>Email:</strong> {to_email}</p>
+                    <p><strong>Password:</strong> {plain_password}</p>
+                </div>
+                <p>Click the button below to get started:</p>
                 <p style="text-align: center;">
-                    <a href="{invite_link}" class="btn">Accept Invitation</a>
+                    <a href="{login_link}" class="btn">Go to Domain Scanner</a>
                 </p>
                 <p style="color: #e74c3c; font-size: 13px;">
-                    ⏰ This invitation expires in <strong>24 hours</strong>.
+                    ⚠️ Please change your password after your first login.
                 </p>
                 <p style="font-size: 13px; color: #888;">
                     If the button doesn't work, copy and paste this link into your browser:<br/>
-                    <a href="{invite_link}" style="color: #0f3460; word-break: break-all;">{invite_link}</a>
+                    <a href="{login_link}" style="color: #0f3460; word-break: break-all;">{login_link}</a>
                 </p>
             </div>
             <div class="footer">
@@ -68,11 +74,11 @@ def send_invite_email(to_email: str, invite_token: str, org_name: str, org_id: s
         raise ValueError("SMTP_USER and SMTP_PASSWORD must be strictly configured in .env to dispatch emails.")
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"You're invited to join {org_name} on Domain Scanner"
+    msg["Subject"] = f"Invitation from {sender_email} to join Domain Scanner"
     msg["From"] = f"Domain Scanner <{SMTP_USER}>"
     msg["To"] = to_email
 
-    part1 = MIMEText(f"You're invited to join {org_name} on Domain Scanner. Link: {invite_link}", "plain")
+    part1 = MIMEText(f"You've been invited by {sender_email} to join Domain Scanner. Email: {to_email}, Password: {plain_password}. Link: {login_link}", "plain")
     part2 = MIMEText(html_content, "html")
 
     msg.attach(part1)

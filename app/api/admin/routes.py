@@ -8,7 +8,7 @@ from app.db.models import PromoCode
 from app.core.middleware import require_admin
 import os
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def _generate_promo_string(length: int = 10) -> str:
@@ -50,7 +50,6 @@ def list_promo_codes(
         {
             "code": c.code,
             "is_used": c.is_used,
-            "used_by_org": c.used_by_org,
             "used_at": c.used_at.isoformat() if c.used_at else None,
         }
         for c in codes

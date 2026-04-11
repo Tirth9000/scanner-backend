@@ -1,30 +1,30 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.api.auth.schemas import (
     RegisterRequest, LoginRequest, InviteRequest,
-    AcceptInviteRequest, OrgMembersRequest, RedeemPromoRequest
+    RedeemPromoRequest
 )
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.auth.service import (
-    register_user, login_user, get_user_profile,
-    invite_member, accept_invitation,
-    get_org_members, redeem_promo_code
+    login_user, register, invite_member,
+    get_members, redeem_promo_code
 )
+from app.core.middleware import require_owner, protect
+from app.db.models import User, Organization
 
-router = APIRouter(prefix='/api/auth', tags=['auth'])
+router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/register')
-def register(req: RegisterRequest, db: Session = Depends(get_db)):
+def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     email = req.email
     password = req.password
-    domain = req.domain.lower().strip()
-    org_name = req.org_name.strip()
+    domain = req.domain
 
-    if not email or not password or not domain or not org_name:
+    if not email or not password:
         raise HTTPException(status_code=400, detail="Please fill all the fields")
 
     try:
-        return register_user(email, password, domain, org_name, db)
+        return register(email, password, domain, db)
     except HTTPException:
         raise
     except Exception as e:
@@ -45,23 +45,17 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-@router.get('/profile/{user_id}')
-def getProfile(user_id: str, db: Session = Depends(get_db)):
-    try:
-        return get_user_profile(user_id, db)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail="Internal Server Error"+str(e))
 
 
 @router.post('/invite')
-def invite_members(req: InviteRequest, db: Session = Depends(get_db)):
+def invite_members(
+    req: InviteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner)
+):
     try:
-        return invite_member(req.sender_email, req.email, db)
+        return invite_member(current_user, req.email, db)
     except HTTPException:
         raise
     except Exception as e:
@@ -69,28 +63,42 @@ def invite_members(req: InviteRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post('/accept-invite')
-def accept_invite(req: AcceptInviteRequest, db: Session = Depends(get_db)):
+@router.get('/members')
+def list_members(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner)
+):
     try:
-        return accept_invitation(req.email, req.password, req.token, db)
+        return get_members(current_user, db)
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-
-
-
-@router.post('/org-members')
-def list_org_members(req: OrgMembersRequest, db: Session = Depends(get_db)):
-    return get_org_members(req.org_id, db)
+@router.get('/profile')
+def get_profile(
+    current_user: User = Depends(protect),
+    db: Session = Depends(get_db)
+):
+    org = db.query(Organization).filter(Organization.org_id == current_user.org_id).first()
+    return {
+        "user_id": current_user.user_id,
+        "org_id": current_user.org_id,
+        "email": current_user.email,
+        "role": current_user.role,
+        "domain": org.domain if org else None,
+        "max_domains": org.max_domains if org else 0
+    }
 
 
 @router.post('/redeem-promo')
-def redeem_promo(req: RedeemPromoRequest, db: Session = Depends(get_db)):
+def redeem_promo(
+    req: RedeemPromoRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(protect)
+):
     try:
-        return redeem_promo_code(req.code, req.org_id, db)
+        return redeem_promo_code(current_user.user_id, req.code, db)
     except HTTPException:
         raise
     except Exception as e:

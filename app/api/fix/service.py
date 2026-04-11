@@ -157,7 +157,7 @@ def recalculate_score(summary: ScanSummary, scan_result: ScanResult):
     summary.severity = get_cvss_severity(domain_score)["severity"]
 
 
-def apply_fix_result(scan_id: str, domain: str, fix_type: str, result, db: Session) -> dict:
+def apply_fix_result(org_id: str, domain: str, fix_type: str, result, db: Session) -> dict:
     """
     Process a fix result from the scanner.
 
@@ -173,7 +173,7 @@ def apply_fix_result(scan_id: str, domain: str, fix_type: str, result, db: Sessi
     if not issue_key or not category:
         return fail
 
-    summary = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
+    summary = db.query(ScanSummary).filter(ScanSummary.domain == domain).first()
     if not summary:
         return fail
 
@@ -181,7 +181,7 @@ def apply_fix_result(scan_id: str, domain: str, fix_type: str, result, db: Sessi
     if not removed:
         return fail
 
-    scan_result = db.query(ScanResult).filter(ScanResult.scan_id == scan_id).first()
+    scan_result = db.query(ScanResult).filter(ScanResult.org_id == org_id).first()
     if scan_result:
         recalculate_score(summary, scan_result)
 

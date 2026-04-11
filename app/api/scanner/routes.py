@@ -1,25 +1,59 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.scanner.service import create_scan_task_to_queue
+from app.api.scanner.schemas import ScanRequest
 from app.core.redis_queue import RedisClient
-from app.core.middleware import protect
+from app.core.middleware import require_owner, protect
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 import json
-from app.db.models import ScanResult, ScanRequest, User, Organization
-from app.api.scanner.schemas import ScanTaskRequest, ScanHistoryRequest
+from app.db.models import ScanResult, User
 
 redis_client = RedisClient()
 
-router = APIRouter(prefix='/api/scanner', tags=["scanner"])
+router = APIRouter(prefix='/scanner', tags=["scanner"])
 
 @router.post("/register-scan-task")
 async def register_scan_task(
-    request: ScanTaskRequest,
-    db: Session = Depends(get_db)
+    request: ScanRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_owner)
 ):
-    domain = request.domain
-    user_id = request.user_id
-    return create_scan_task_to_queue(db, domain, user_id)
+    target = request.domain
+    domain = target.strip().lower()
+    org_id = user.org_id
+    return create_scan_task_to_queue(db, domain, org_id)
+
+@router.get("/scanresult")
+def get_scan_result(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(protect)
+):
+    scan = db.query(ScanResult).filter(
+        ScanResult.org_id == current_user.org_id
+    ).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return scan
+
+@router.get("/scan-history")
+def get_scan_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(protect)
+):
+    scan = db.query(ScanResult).filter(
+        ScanResult.org_id == current_user.org_id
+    ).first()
+
+    if not scan:
+        return []
+
+    return [
+        {
+            "domain": scan.domain,
+            "time": scan.time.isoformat() if scan.time else None,
+        }
+    ]
+
 
 
 # for testing purpose only, to check the scan queue in redis
@@ -32,53 +66,3 @@ async def get_scan_list():
 async def clear_scan_queue(): 
     redis_client.redis.delete("scan_queue")
     return {"message": "Scan queue cleared"}
-
-@router.get("/scan-result")
-def get_scan_result(
-    scan_id: str,
-    db: Session = Depends(get_db)
-):
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
-    # Scope by organization — all org members see the same data
-    org_id = current_user["organization_id"]
-    org_user_ids = [
-        u.user_id for u in
-        db.query(User.user_id).filter(User.organization_id == org_id).all()
-    ]
-
-    scan = db.query(ScanResult).filter(
-        ScanResult.scan_id == scan_id,
-        ScanResult.user_id.in_(org_user_ids)
-    ).first()
-
-    if not scan:
-        raise HTTPException(status_code=404, detail="Scan not found")
-
-    return scan.results
-
-
-@router.post("/scan-history")
-def get_scan_history(
-    req: ScanHistoryRequest,
-    db: Session = Depends(get_db)
-):
-    """Return all scans belonging to the organization (all members see the same data)."""
-    org_id = req.org_id
-    org_user_ids = [
-        u.user_id for u in
-        db.query(User.user_id).filter(User.organization_id == org_id).all()
-    ]
-
-    scans = db.query(ScanRequest).filter(
-        ScanRequest.user_id.in_(org_user_ids)
-    ).order_by(ScanRequest.time.desc()).all()
-
-    return [
-        {
-            "scan_id": s.scan_id,
-            "domain": s.domain,
-            "time": s.time.isoformat() if s.time else None,
-        }
-        for s in scans
-    ]

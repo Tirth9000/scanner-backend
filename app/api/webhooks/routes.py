@@ -3,33 +3,32 @@ from app.api.webhooks.schemas import ScannerWebhookRequest, ScannerWebhookResult
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 from app.db.base import get_db
-from app.db.models import ScanRequest,ScanResult
+from app.db.models import ScanResult
 
 connections = {}
 
 router = APIRouter(prefix='/webhooks')
-@router.websocket("/ws/{scan_id}")
-async def websocket_endpoint(websocket: WebSocket, scan_id: str):
+@router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
     await websocket.accept()
 
-    connections[scan_id] = websocket
+    connections[user_id] = websocket
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        connections.pop(scan_id, None)
+        connections.pop(user_id, None)
 
 @router.post("/scan/notification")
 async def scanner_webhook(request: ScannerWebhookRequest):
-    scan_id = request.scan_id
     payload = {
         "event": request.event,
-        "scan_id": request.scan_id,
+        "user_id": request.scan_id,
         "target": request.target,
         "status": request.status
     }
-    ws = connections.get(scan_id)
+    ws = connections.get(request.scan_id)
     if ws:
         await ws.send_json(payload)
     return {"status": "received"}
@@ -37,27 +36,23 @@ async def scanner_webhook(request: ScannerWebhookRequest):
 
 @router.post("/scan/result")
 async def scan_result_webhook(
-    request: Request,
+    request: ScannerWebhookResultRequest,
     db: Session = Depends(get_db)
 ):
     try:
-        body = await request.json()
-        scan_id = body.get("scan_id")
-
-        if not scan_id:
-            raise HTTPException(status_code=400, detail="scan_id missing")
-
+        target = request.target
+        raw_data = request.data
+        if not target:
+            raise HTTPException(status_code=400, detail="target missing")
         scan = db.query(ScanResult).filter(
-            ScanResult.scan_id == scan_id
+            ScanResult.domain == target.strip().lower()
         ).first()
-
         if not scan:
             raise HTTPException(status_code=404, detail="Scan not found")
-
-        scan.results = body
+        scan.results = raw_data
         db.commit()
-
         return {"status": "ok"}
+
     except HTTPException:
         raise
     except Exception as e:

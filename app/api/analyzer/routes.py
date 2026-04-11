@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
-from app.db.models import ScanSummary, ScanResult, ScanRequest, User
+from app.db.models import ScanSummary, ScanResult, User
 from app.core.middleware import protect
-from app.api.analyzer.schemas import UserHistoryRequest
 
-router = APIRouter(prefix="/api/score",tags=["Scoring"])
+router = APIRouter(prefix="/score",tags=["Scoring"])
 
 
 def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
@@ -24,47 +24,28 @@ def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
     return categorized
 
 
-@router.get("/generate/{scan_id}")
+@router.get("/generate")
 def generate_score(
-    scan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(protect)
 ):
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     try:
-        scans = db.query(ScanSummary).filter(ScanSummary.scan_id == scan_id).first()
-
-        if scans:
-            print("Score already exists for scan_id:", scan_id)
-            return {
-                "scan_id": scans.scan_id,
-                "domain_score": scans.domain_score,
-                "host": {
-                    "domain": scans.domain,
-                    "mail_security": scans.mail_security or {}
-                },
-                "severity": scans.severity,
-                "categorized_vulnerabilities": build_categorized_vulnerabilities(scans),
-                "ips": scans.ips or []
-            }
-        
-        return calculate_score(scan_id, db, user_id=current_user["user_id"])
-    
+        org_id = user.org_id
+        return calculate_score(db, org_id)
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error generating score: {str(e)}"
         )
 
-@router.get("/get_score/{scan_id}")
+
+@router.get("/get_score/{org_id}")
 def get_score(
-    scan_id: str,
+    org_id: str,
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     score = db.query(ScanSummary).filter(
-        ScanSummary.scan_id == scan_id
+        ScanSummary.org_id == org_id
     ).first()
     if not score:
         raise HTTPException(
@@ -72,7 +53,7 @@ def get_score(
             detail="Score not found. Generate it first."
         )
     return {
-        "scan_id": score.scan_id,
+        "org_id": score.org_id,
         "domain_score": score.domain_score,
         "host": {
             "domain": score.domain,
@@ -83,31 +64,32 @@ def get_score(
         "ips": score.ips or []
     }
 
-@router.get("/get_raw_data/{scan_id}")
+@router.get("/get_raw_data/{org_id}")
 def get_raw_data(
-    scan_id: str,
+    org_id: str,
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
-    score = db.query(ScanResult).filter(
-        ScanResult.scan_id == scan_id
+    scan = db.query(ScanResult).filter(
+        ScanResult.org_id == org_id
     ).first()
-    if not score:
+    if not scan:
         raise HTTPException(
             status_code=404,
             detail="Raw data not found. Generate it first."
         )
-    return score.results
+    return scan
 
-@router.post("/user_history")
-def get_all_scores(
-    req: UserHistoryRequest,
+@router.delete("/delete_score/{org_id}")
+def delete_score(
+    org_id: str,
     db: Session = Depends(get_db)
 ):
-    scans = db.query(ScanRequest).filter(
-        ScanRequest.user_id == req.user_id
-    ).order_by(ScanRequest.time.desc()).all()
-
-    return [scan.scan_id for scan in scans]
-
+    score = db.query(ScanSummary).filter(
+        ScanSummary.org_id == org_id
+    ).first()
+    if not score:
+        raise HTTPException(status_code=404, detail="Score not found")
+    
+    db.delete(score)
+    db.commit()
+    return {"detail": "Score deleted successfully"}

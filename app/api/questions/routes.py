@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.db.base import get_db
 from app.db.models import Question
 
-router = APIRouter(prefix="/api/questions", tags=["questions"])
+router = APIRouter(prefix="/questions", tags=["questions"])
 
 
 @router.get("/")

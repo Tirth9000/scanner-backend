@@ -7,7 +7,6 @@ from app.api.auth.routes import router as auth_router
 from app.api.scanner.routes import router as scanner_router
 from app.db.create_db import init_db
 from app.db.init_db import init_tables
-
 from app.api.webhooks.routes import router as webhook_scanner_router
 from app.api.assessment.routes import router as assessment_router
 from app.api.questions.routes import router as questions_router
@@ -21,7 +20,7 @@ app = FastAPI()
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
-    print("Initializing database...")
+    # print("Initializing database...")
     init_db()
     init_tables()
 
@@ -37,12 +36,12 @@ async def startup_event():
     finally:
         db.close()
 
-    try:
-        # Attempt to create default admin 
-        from scripts.create_admin import create_admin_user
-        create_admin_user("admin@example.com", "admin")
-    except Exception as e:
-        print(f"Failed to create default admin on startup: {e}")
+    # try:
+        # # Attempt to create default admin 
+        # from scripts.create_admin import create_admin_user
+        # create_admin_user("admin@example.com", "admin")
+    # except Exception as e:
+    #     print(f"Failed to create default admin on startup: {e}")
 
 # CORS
 app.add_middleware(
