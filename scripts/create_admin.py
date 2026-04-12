@@ -96,4 +96,4 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     create_admin_user()
->>>>>>> f08a798df8f002f77f0f86744dc9d0ee5f34e6db
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)

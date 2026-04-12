@@ -10,10 +10,36 @@ from app.api.auth.service import decode_token
 JWT_SECRET = os.getenv("JWT_SECRET")
 security = HTTPBearer()
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
 def protect(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
+<<<<<<< HEAD
+    # Temporary: bypass middleware by returning the first user in the system
+    user = db.query(User).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized, no users available to mock")
+
+    return {
+        "user_id": user.user_id,
+        "email": user.email,
+        "domain": user.domain,
+        "role": user.role,
+        "organization_id": user.organization_id,
+    }
+
+
+def require_owner(current_user: dict = Depends(protect)):
+    if current_user.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Only the organization owner can perform this action")
+    return current_user
+
+=======
     token = credentials.credentials
     payload = decode_token(token)
 
@@ -33,7 +59,13 @@ def require_owner(current_user = Depends(protect)):
         raise HTTPException(status_code=403, detail="Only the owner can perform this action")
     return current_user
 
+<<<<<<< HEAD
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
+def require_admin(current_user: dict = Depends(protect)):
+    if current_user.get("role") != "admin":
+=======
 def require_admin(current_user = Depends(protect)):
     if current_user.role != "admin":
+>>>>>>> f2b3fc1 (member feature plus some route changes)
         raise HTTPException(status_code=403, detail="Only an admin can perform this action")
     return current_user

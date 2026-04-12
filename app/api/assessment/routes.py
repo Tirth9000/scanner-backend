@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
+<<<<<<< HEAD
 from app.core.middleware import protect
 
+=======
+from app.db.models import User, AssessmentResult
+from app.core.middleware import protect
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
 from app.db.base import get_db
 from app.db.models import AssessmentResult
 from app.api.assessment.schemas import SubmitAssessmentBody
@@ -17,9 +22,22 @@ router = APIRouter(prefix="/assess", tags=["assessment"])
 async def submit_assessment(
     body: SubmitAssessmentBody,
     db: Session = Depends(get_db),
+<<<<<<< HEAD
+<<<<<<< HEAD
+    current_user: dict = Depends(protect)
+):
+    result = submit_assessment_logic(body, current_user["user_id"], db)
+=======
+    user: User = Depends(protect)
+):
+    user_id = user.user_id
+    result = submit_assessment_logic(body, user_id, db)
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
+=======
     current_user = Depends(protect)
 ):
     result = submit_assessment_logic(body, current_user.user_id, db)
+>>>>>>> f2b3fc1 (member feature plus some route changes)
 
     return {
         "success": True,
@@ -37,9 +55,21 @@ async def submit_assessment(
 @router.get("/latest")
 async def get_latest_assessment_result(
     db: Session = Depends(get_db),
+<<<<<<< HEAD
+<<<<<<< HEAD
+    current_user: dict = Depends(protect)
+):
+    result = get_latest_assessment(current_user["user_id"], db)
+=======
+    user: User = Depends(protect)
+):
+    result = get_latest_assessment(user.user_id, db)
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
+=======
     current_user = Depends(protect)
 ):
     result = get_latest_assessment(current_user.user_id, db)
+>>>>>>> f2b3fc1 (member feature plus some route changes)
 
     return {
         "_id": str(result._id),

@@ -42,7 +42,11 @@ def mapRiskToColor(risk: str) -> str:
     return "gray"
 
 
+<<<<<<< HEAD
+def submit_assessment_logic(body, user_id: str, db: Session):
+=======
 def submit_assessment_logic(body, user_id : str, db: Session):
+>>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
     answers = body.answers
     questions = db.query(Question).all()
 
