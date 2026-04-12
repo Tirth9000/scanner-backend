@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from app.api.webhooks.schemas import ScannerWebhookRequest, ScannerWebhookResultRequest
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException
 from app.db.base import get_db
 from app.db.models import ScanResult
 
 connections = {}
 
 router = APIRouter(prefix='/webhooks')
+
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
     await websocket.accept()
@@ -33,7 +33,6 @@ async def scanner_webhook(request: ScannerWebhookRequest):
         await ws.send_json(payload)
     return {"status": "received"}
 
-
 @router.post("/scan/result")
 async def scan_result_webhook(
     request: ScannerWebhookResultRequest,
@@ -49,15 +48,8 @@ async def scan_result_webhook(
         ).first()
         if not scan:
             raise HTTPException(status_code=404, detail="Scan not found")
-<<<<<<< HEAD
-
-        if "status" not in body:
-            body["status"] = "completed"
         
-        scan.results = body
-=======
         scan.results = raw_data
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
         db.commit()
         return {"status": "ok"}
 

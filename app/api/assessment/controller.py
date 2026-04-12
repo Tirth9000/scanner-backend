@@ -1,10 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import Question, AssessmentResult
-from fastapi import HTTPException
-from sqlalchemy.orm import Session
-from app.db.models import Question, AssessmentResult
-
 
 def calculateGrade(percentage: int) -> str:
     if percentage >= 90:
@@ -16,7 +12,6 @@ def calculateGrade(percentage: int) -> str:
     if percentage >= 60:
         return "D"
     return "F"
-
 
 def mapGradeToRisk(grade: str) -> str:
     if grade == "A":
@@ -31,7 +26,6 @@ def mapGradeToRisk(grade: str) -> str:
         return "Critical"
     return "Unknown"
 
-
 def mapRiskToColor(risk: str) -> str:
     if risk in ("Secure", "Low"):
         return "green"
@@ -41,12 +35,7 @@ def mapRiskToColor(risk: str) -> str:
         return "red"
     return "gray"
 
-
-<<<<<<< HEAD
 def submit_assessment_logic(body, user_id: str, db: Session):
-=======
-def submit_assessment_logic(body, user_id : str, db: Session):
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
     answers = body.answers
     questions = db.query(Question).all()
 
@@ -150,7 +139,6 @@ def submit_assessment_logic(body, user_id : str, db: Session):
     db.refresh(new_result)
 
     return new_result
-
 
 def get_latest_assessment(user_id: str, db: Session):
     result = (

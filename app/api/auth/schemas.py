@@ -3,11 +3,7 @@ from pydantic import BaseModel, EmailStr
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-<<<<<<< HEAD
     domain: str
-    org_name: str
-=======
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -18,3 +14,11 @@ class InviteRequest(BaseModel):
 
 class RedeemPromoRequest(BaseModel):
     code: str
+
+class AcceptInviteRequest(BaseModel):
+    email: EmailStr
+    password: str
+    token: str
+
+class OrgMembersRequest(BaseModel):
+    org_id: str

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.redis_queue import RedisClient
-# from app.core.middleware import protect
+from app.core.middleware import protect
 from app.db.base import get_db
 from app.api.fix.schemas import FixRequest, FixSubmitResponse, FixResultRequest, FixResultResponse
 from app.api.fix.service import apply_fix_result
@@ -15,23 +15,7 @@ QUEUE_NAME = "fix_queue"
 
 
 @router.post("/submit", response_model=FixSubmitResponse)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
 def submit_fix(request: FixRequest, db: Session = Depends(get_db)):
-<<<<<<< HEAD
-    from app.db.models import User
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
-<<<<<<< HEAD
-=======
-def submit_fix(request: FixRequest):
->>>>>>> c2ee839 (Refactor fix API routes; remove user_id dependency from create_scan_task_to_queue and submit_fix functions)
-=======
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
-=======
->>>>>>> f2b3fc1 (member feature plus some route changes)
     try:
         job_data = request.model_dump()
         job_data["scan_id"] = job_data["org_id"]

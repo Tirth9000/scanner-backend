@@ -3,19 +3,10 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.analyzer.controller import calculate_score
-<<<<<<< HEAD
-from app.db.models import ScanSummary, ScanResult, ScanRequest, User
-=======
 from app.db.models import ScanSummary, ScanResult, User
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
 from app.core.middleware import protect
 
-<<<<<<< HEAD
 router = APIRouter(prefix="/score", tags=["Scoring"])
-=======
-router = APIRouter(prefix="/score",tags=["Scoring"])
->>>>>>> f2b3fc1 (member feature plus some route changes)
-
 
 def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
     categorized = {}
@@ -31,15 +22,10 @@ def build_categorized_vulnerabilities(scans: ScanSummary) -> dict:
 
     return categorized
 
-
 @router.get("/generate")
 def generate_score(
     db: Session = Depends(get_db),
     user: User = Depends(protect)
-<<<<<<< HEAD
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
-=======
->>>>>>> 1afa5bb (merge with adi-2)
 ):
     try:
         org_id = user.org_id
@@ -50,18 +36,9 @@ def generate_score(
             detail=f"Error generating score: {str(e)}"
         )
 
-
 @router.get("/get_score/{org_id}")
 def get_score(
-<<<<<<< HEAD
-    user_id: str,
-<<<<<<< HEAD
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
-=======
->>>>>>> 1afa5bb (merge with adi-2)
-=======
     org_id: str,
->>>>>>> f2b3fc1 (member feature plus some route changes)
     db: Session = Depends(get_db)
 ):
     score = db.query(ScanSummary).filter(
@@ -86,15 +63,7 @@ def get_score(
 
 @router.get("/get_raw_data/{org_id}")
 def get_raw_data(
-<<<<<<< HEAD
-    user_id: str,
-<<<<<<< HEAD
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
-=======
->>>>>>> 1afa5bb (merge with adi-2)
-=======
     org_id: str,
->>>>>>> f2b3fc1 (member feature plus some route changes)
     db: Session = Depends(get_db)
 ):
     scan = db.query(ScanResult).filter(
@@ -121,7 +90,3 @@ def delete_score(
     db.delete(score)
     db.commit()
     return {"detail": "Score deleted successfully"}
-<<<<<<< HEAD
->>>>>>> f08a798 (Refactor authentication and assessment logic; add user role management and email invitation system)
-=======
->>>>>>> 1afa5bb (merge with adi-2)
