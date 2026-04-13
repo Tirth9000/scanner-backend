@@ -33,6 +33,14 @@ class Invitation(Base):
     invited_by = Column(String(36), ForeignKey("users.user_id"), nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
 
+class PasswordResetOTP(Base):
+    __tablename__ = "password_reset_otps"
+
+    user_id = Column(String(36), ForeignKey("users.user_id"), primary_key=True)
+    otp_hash = Column(String(255), nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
 class PromoCode(Base):
     __tablename__ = "promo_codes"
 
@@ -63,21 +71,21 @@ class AssessmentResult(Base):
 class ScanRequest(Base):
     __tablename__ = "scan_request"
 
-    scan_id = Column(String(36), primary_key=True)
-    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_id = Column(String(36), ForeignKey("organizations.org_id"), nullable=False)
     domain = Column(Text, nullable=False)
     time = Column(TIMESTAMP, server_default=func.now())
     data = Column(JSONB, nullable=True)
 
     __table_args__ = (
+        Index("idx_scan_request_org", "org_id"),
         Index("idx_scan_request_domain", "domain"),
     )
 
 class ScanResult(Base):
     __tablename__ = "scan_result"
 
-    scan_id = Column(String(36), ForeignKey("scan_request.scan_id", ondelete="CASCADE"), primary_key=True)
-    org_id = Column(String(36), ForeignKey("organizations.org_id"), nullable=False)
+    org_id = Column(String(36), ForeignKey("organizations.org_id"), primary_key=True)
     domain = Column(Text, nullable=False)
     results = Column(JSONB, nullable=False)
     time = Column(TIMESTAMP, server_default=func.now())

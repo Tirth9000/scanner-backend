@@ -6,11 +6,11 @@ from jose import JWTError, jwt
 import os
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import func
-from app.db.models import User, Organization, Invitation, PromoCode
-from app.utils.email import send_invite_email
+from app.db.models import User, Organization, Invitation, PromoCode, PasswordResetOTP
+from app.utils.email import send_invite_email, send_password_reset_otp_email
 
 JWT_SECRET = os.getenv('JWT_SECRET')
+OTP_EXPIRY_MINUTES = 10
 
 def hashPassword(password: str) -> str:
     salt = bcrypt.gensalt(10)
@@ -108,6 +108,87 @@ def login_user(email: str, password: str, db: Session):
             "role": user.role
         }
     }
+
+def send_forgot_password_otp(email: str, db: Session):
+    email_lower = email.lower()
+    user = db.query(User).filter(User.email == email_lower).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    otp = f"{secrets.randbelow(1000000):06d}"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES)
+
+    existing_otp = db.query(PasswordResetOTP).filter(
+        PasswordResetOTP.user_id == user.user_id
+    ).first()
+
+    if existing_otp:
+        db.delete(existing_otp)
+        db.flush()
+
+    reset_otp = PasswordResetOTP(
+        user_id=user.user_id,
+        otp_hash=hashPassword(otp),
+        expires_at=expires_at
+    )
+    db.add(reset_otp)
+
+    try:
+        send_password_reset_otp_email(to_email=user.email, otp=otp)
+    except Exception as email_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to send email to {email_lower}: {str(email_err)}")
+
+    db.commit()
+    return {"message": "OTP sent successfully"}
+
+def verify_otp_and_reset_password(email: str, otp: str, new_password: str, db: Session):
+    email_lower = email.lower()
+    user = db.query(User).filter(User.email == email_lower).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    otp_record = db.query(PasswordResetOTP).filter(
+        PasswordResetOTP.user_id == user.user_id
+    ).first()
+
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    now_utc = datetime.now(timezone.utc)
+    expires_at = otp_record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < now_utc:
+        db.delete(otp_record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    if not verifyPassword(otp.strip(), otp_record.otp_hash):
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    user.password = hashPassword(new_password)
+    db.delete(otp_record)
+
+    db.commit()
+    return {"message": "Password reset successful"}
+
+def reset_password_with_old_password(user_id: str, old_password: str, new_password: str, db: Session):
+    user = db.query(User).filter(User.user_id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verifyPassword(old_password, user.password):
+        raise HTTPException(status_code=401, detail="Old password is incorrect")
+
+    user.password = hashPassword(new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully"}
 
 def invite_member(owner: User, invite_email: str, db: Session):
     org_id = owner.org_id

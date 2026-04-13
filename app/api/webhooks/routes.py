@@ -43,9 +43,15 @@ async def scan_result_webhook(
         raw_data = request.data
         if not target:
             raise HTTPException(status_code=400, detail="target missing")
-        scan = db.query(ScanResult).filter(
-            ScanResult.domain == target.strip().lower()
-        ).first()
+        org_id = request.scan_id
+        if not org_id:
+             scan = db.query(ScanResult).filter(
+                ScanResult.domain == target.strip().lower()
+            ).first()
+        else:
+            scan = db.query(ScanResult).filter(
+                ScanResult.org_id == org_id
+            ).first()
         if not scan:
             raise HTTPException(status_code=404, detail="Scan not found")
         

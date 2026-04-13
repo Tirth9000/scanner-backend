@@ -53,17 +53,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routes ───────────────────────────────────────────────────────────
-#
-# Production (Nginx strips /api):
-#   Browser → /api/auth/register → Nginx → /auth/register → backend
-#
-# Local dev (no Nginx, config.ts adds /api):
-#   Browser → /api/auth/register → backend directly
-#
-# Both are handled by mounting routers TWICE:
 
-# 1) Without /api prefix — matches Nginx-stripped paths
 app.include_router(auth_router)
 app.include_router(scanner_router)
 app.include_router(assessment_router)
@@ -73,17 +63,6 @@ app.include_router(fix_router)
 app.include_router(malware_router)
 app.include_router(admin_router)
 app.include_router(webhook_scanner_router)
-
-# 2) With /api prefix — matches local dev / direct access paths
-app.include_router(auth_router, prefix="/api", include_in_schema=False)
-app.include_router(scanner_router, prefix="/api", include_in_schema=False)
-app.include_router(assessment_router, prefix="/api", include_in_schema=False)
-app.include_router(questions_router, prefix="/api", include_in_schema=False)
-app.include_router(analyzer_router, prefix="/api", include_in_schema=False)
-app.include_router(fix_router, prefix="/api", include_in_schema=False)
-app.include_router(malware_router, prefix="/api", include_in_schema=False)
-app.include_router(admin_router, prefix="/api", include_in_schema=False)
-app.include_router(webhook_scanner_router, prefix="/api", include_in_schema=False)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,13 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.api.auth.schemas import (
     RegisterRequest, LoginRequest, InviteRequest,
-    RedeemPromoRequest
+    RedeemPromoRequest, ForgotPasswordOtpRequest,
+    ForgotPasswordResetRequest, ResetPasswordRequest
 )
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.auth.service import (
     login_user, register, invite_member,
-    get_members, redeem_promo_code
+    get_members, redeem_promo_code,
+    send_forgot_password_otp, verify_otp_and_reset_password,
+    reset_password_with_old_password
 )
 from app.core.middleware import require_owner, protect
 from app.db.models import User, Organization
@@ -44,6 +47,46 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@router.post('/forgot-password')
+def forgot_password(req: ForgotPasswordOtpRequest, db: Session = Depends(get_db)):
+    try:
+        return send_forgot_password_otp(req.email, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@router.post('/forgot-password/reset')
+def forgot_password_reset(req: ForgotPasswordResetRequest, db: Session = Depends(get_db)):
+    if not req.otp or not req.new_password:
+        raise HTTPException(status_code=400, detail="Please fill all the fields")
+
+    try:
+        return verify_otp_and_reset_password(req.email, req.otp, req.new_password, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@router.post('/reset-password')
+def reset_password(
+    req: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(protect)
+):
+    if not req.old_password or not req.new_password:
+        raise HTTPException(status_code=400, detail="Please fill all the fields")
+
+    try:
+        return reset_password_with_old_password(current_user.user_id, req.old_password, req.new_password, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post('/invite')

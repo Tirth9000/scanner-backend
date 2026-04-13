@@ -15,6 +15,18 @@ class InviteRequest(BaseModel):
 class RedeemPromoRequest(BaseModel):
     code: str
 
+class ForgotPasswordOtpRequest(BaseModel):
+    email: EmailStr
+
+class ForgotPasswordResetRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+class ResetPasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
 class AcceptInviteRequest(BaseModel):
     email: EmailStr
     password: str
