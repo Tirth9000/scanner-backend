@@ -4,6 +4,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     domain: str
+    name: str | None = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -34,3 +35,6 @@ class AcceptInviteRequest(BaseModel):
 
 class OrgMembersRequest(BaseModel):
     org_id: str
+
+class AddDomainRequest(BaseModel):
+    domain: str

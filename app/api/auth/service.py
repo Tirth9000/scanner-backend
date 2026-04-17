@@ -6,7 +6,8 @@ from jose import JWTError, jwt
 import os
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.db.models import User, Organization, Invitation, PromoCode, PasswordResetOTP
+from sqlalchemy.orm.attributes import flag_modified
+from app.db.models import User, Organization, Invitation, PromoCode, PasswordResetOTP, Blacklist
 from app.utils.email import send_invite_email, send_password_reset_otp_email
 
 JWT_SECRET = os.getenv('JWT_SECRET')
@@ -42,10 +43,14 @@ def decode_token(token: str):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 def register(email: str, password: str, domain: str, db: Session):
-    email_lower = email.lower()
+    email_lower = email.lower().strip()
     existing_user = db.query(User).filter(User.email == email_lower).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
+
+    domain = domain.strip().lower()
+    if not domain:
+        raise HTTPException(status_code=400, detail="Domain is required")
 
     email_domain = email_lower.split("@")[-1]
     existing_domain_owner = db.query(User).filter(
@@ -71,12 +76,12 @@ def register(email: str, password: str, domain: str, db: Session):
     db.add(new_user)
     db.flush()
 
-    # Create organization for the owner
+    # Create organization for the owner (first domain is set at registration)
     org_id = str(uuid.uuid4())
     new_org = Organization(
         org_id=org_id,
         user_id=user_id,
-        domain=domain.strip().lower(),
+        domain=[domain],
     )
     db.add(new_org)
     db.flush()
@@ -88,8 +93,13 @@ def register(email: str, password: str, domain: str, db: Session):
     return {"message": "Registration successful", "email": email_lower}
 
 def login_user(email: str, password: str, db: Session):
+    email_lower = email.lower().strip()
+    blocked_user = db.query(Blacklist).filter(Blacklist.email == email_lower).first()
+    if blocked_user:
+        raise HTTPException(status_code=403, detail="This user has been blocked by an admin")
+
     user = db.query(User).filter(
-        User.email == email.lower()
+        User.email == email_lower
     ).first()
 
     if not user:
@@ -99,14 +109,21 @@ def login_user(email: str, password: str, db: Session):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     access_token = generateToken(user.user_id, org_id=user.org_id, role=user.role)
+    org = (
+        db.query(Organization).filter(Organization.org_id == user.org_id).first()
+        if user.org_id
+        else None
+    )
+    org_domains = list(org.domain) if org and org.domain else []
+    primary_domain = org_domains[0] if org_domains else ""
     return {
         "token": access_token,
         "user": {
+            "role": user.role,
             "user_id": user.user_id,
             "org_id": user.org_id,
             "email": user.email,
-            "role": user.role
-        }
+        },
     }
 
 def send_forgot_password_otp(email: str, db: Session):
@@ -245,7 +262,6 @@ def invite_member(owner: User, invite_email: str, db: Session):
 def get_members(owner: User, db: Session):
     members = db.query(User).filter(
         User.org_id == owner.org_id,
-        User.role == "member"
     ).all()
 
     return [
@@ -284,4 +300,38 @@ def redeem_promo_code(user_id: str, code: str, db: Session):
     return {
         "message": "Promo code redeemed successfully",
         "max_domains": org.max_domains
+    }
+
+def add_domain(user_id: str, domain: str, db: Session):
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user or not user.org_id:
+        raise HTTPException(status_code=400, detail="User not associated with an organization")
+
+    org = db.query(Organization).filter(Organization.org_id == user.org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    domain = domain.strip().lower()
+    if not domain:
+        raise HTTPException(status_code=400, detail="Domain is required")
+
+    org_domains = list(org.domain) if org.domain else []
+
+    if domain in org_domains:
+        raise HTTPException(status_code=400, detail="Domain already added")
+
+    if len(org_domains) >= org.max_domains:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Domain limit reached. Maximum {org.max_domains} domain(s) allowed. Redeem a promo code to add more."
+        )
+
+    org_domains.append(domain)
+    org.domain = org_domains
+    flag_modified(org, "domain")
+
+    db.commit()
+    return {
+        "message": "Domain added successfully",
+        "domains": org_domains
     }

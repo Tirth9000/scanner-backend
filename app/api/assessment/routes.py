@@ -17,6 +17,12 @@ async def submit_assessment(
     db: Session = Depends(get_db),
     current_user = Depends(protect)
 ):
+    if not current_user.org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User not associated with an organization"
+        )
+
     result = submit_assessment_logic(body, current_user.user_id, db)
 
     return {
@@ -36,7 +42,7 @@ async def get_latest_assessment_result(
     db: Session = Depends(get_db),
     current_user = Depends(protect)
 ):
-    result = get_latest_assessment(current_user.user_id, db)
+    result = get_latest_assessment(current_user.org_id, db)
 
     return {
         "_id": str(result._id),
@@ -51,9 +57,16 @@ async def get_assessment_history(
     db: Session = Depends(get_db),
     current_user = Depends(protect)
 ):
+    if not current_user.org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User not associated with an organization"
+        )
+
     results = (
         db.query(AssessmentResult)
-        .filter(AssessmentResult.user_id == current_user.user_id)
+        .join(User, AssessmentResult.user_id == User.user_id)
+        .filter(User.org_id == current_user.org_id)
         .order_by(AssessmentResult.created_at.desc())
         .limit(limit)
         .all()

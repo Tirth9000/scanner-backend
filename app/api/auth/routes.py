@@ -2,13 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.api.auth.schemas import (
     RegisterRequest, LoginRequest, InviteRequest,
     RedeemPromoRequest, ForgotPasswordOtpRequest,
-    ForgotPasswordResetRequest, ResetPasswordRequest
+    ForgotPasswordResetRequest, ResetPasswordRequest,
+    AddDomainRequest
 )
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.auth.service import (
     login_user, register, invite_member,
-    get_members, redeem_promo_code,
+    get_members, redeem_promo_code, add_domain,
     send_forgot_password_otp, verify_otp_and_reset_password,
     reset_password_with_old_password
 )
@@ -23,7 +24,7 @@ def register_route(req: RegisterRequest, db: Session = Depends(get_db)):
     password = req.password
     domain = req.domain
 
-    if not email or not password or not domain:
+    if not email or not password or not domain or not domain.strip():
         raise HTTPException(status_code=400, detail="Please fill all the fields")
 
     try:
@@ -106,7 +107,7 @@ def invite_members(
 @router.get('/members')
 def list_members(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_owner)
+    current_user: User = Depends(protect)
 ):
     try:
         return get_members(current_user, db)
@@ -129,6 +130,20 @@ def get_profile(
         "domain": org.domain if org else None,
         "max_domains": org.max_domains if org else 0
     }
+
+@router.post('/add-domain')
+def add_domain_route(
+    req: AddDomainRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(protect)
+):
+    try:
+        return add_domain(current_user.user_id, req.domain, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post('/redeem-promo')
 def redeem_promo(

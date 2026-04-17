@@ -1,62 +1,66 @@
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from app.api.webhooks.schemas import ScannerWebhookRequest, ScannerWebhookResultRequest
+from app.api.analyzer.controller import calculate_and_store_summary
+from app.core.websocket_manager import ws_manager
 from sqlalchemy.orm import Session
 from app.db.base import get_db
-from app.db.models import ScanResult
-
-connections = {}
 
 router = APIRouter(prefix='/webhooks')
 
-@router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
+
+@router.websocket("/ws/{org_id}")
+async def websocket_endpoint(websocket: WebSocket, org_id: str):
     await websocket.accept()
-
-    connections[user_id] = websocket
-
+    ws_manager.connect(org_id, websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        connections.pop(user_id, None)
+        ws_manager.disconnect(org_id)
+
 
 @router.post("/scan/notification")
 async def scanner_webhook(request: ScannerWebhookRequest):
-    payload = {
-        "event": request.event,
-        "user_id": request.scan_id,
-        "target": request.target,
-        "status": request.status
+    
+    event_map = {
+        "subdomain_discovery_completed": "subdomain_discovery",
+        "subdomain_filter_completed": "subdomain_filter",
+        "subdomain_collection_completed": "data_collection",
     }
-    ws = connections.get(request.scan_id)
-    if ws:
-        await ws.send_json(payload)
+
+    payload = {
+        "event": event_map.get(request.event, request.event),
+        "org_id": request.scan_id,
+        "domain": request.target,
+    }
+    await ws_manager.send(request.scan_id, payload)
     return {"status": "received"}
+
 
 @router.post("/scan/result")
 async def scan_result_webhook(
     request: ScannerWebhookResultRequest,
     db: Session = Depends(get_db)
 ):
+    
     try:
         target = request.target
         raw_data = request.data
+        org_id = request.scan_id
+
         if not target:
             raise HTTPException(status_code=400, detail="target missing")
-        org_id = request.scan_id
         if not org_id:
-             scan = db.query(ScanResult).filter(
-                ScanResult.domain == target.strip().lower()
-            ).first()
-        else:
-            scan = db.query(ScanResult).filter(
-                ScanResult.org_id == org_id
-            ).first()
-        if not scan:
-            raise HTTPException(status_code=404, detail="Scan not found")
-        
-        scan.results = raw_data
-        db.commit()
+            raise HTTPException(status_code=400, detail="scan_id missing")
+
+        calculate_and_store_summary(db, org_id, target.strip().lower(), raw_data)
+
+        await ws_manager.send(org_id, {
+            "event": "scan_complete",
+            "org_id": org_id,
+            "domain": target.strip().lower(),
+        })
+
         return {"status": "ok"}
 
     except HTTPException:

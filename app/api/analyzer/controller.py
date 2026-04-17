@@ -1,7 +1,7 @@
 from collections import defaultdict
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from app.db.models import ScanSummary, ScanResult
+from app.db.models import ScanSummary, ScanScoreHistory
 from sqlalchemy import desc
 START_SCORE = 100
 
@@ -324,25 +324,17 @@ def _to_plain_dict(value):
     }
 
 
-def calculate_score(db: Session, org_id: str):
-    scan = db.query(ScanResult).filter(
-        ScanResult.org_id == org_id
-    ).first()
+def calculate_and_store_summary(db: Session, org_id: str, target: str, raw_data: dict):
+    host = raw_data.get("host", {})
+    subdomains = raw_data.get("subdomains", [])
 
-    if not scan:
-        raise HTTPException(status_code=404, detail="Scan not found")
-
-    data = scan.results or {}
-    host = data.get("host", {})
-    subdomains = data.get("subdomains", [])
-    # Detect mail service
     mail_security = host.get("mail_security", {})
     has_mail_service = bool(
         mail_security.get("spf") or
         mail_security.get("dkim") or
         mail_security.get("mx")
     )
-    root_domain = host.get("domain")
+    root_domain = host.get("domain") or target
 
     scoring = score_domain(subdomains, root_domain=root_domain, has_mail_service=has_mail_service)
     categorized = categorize_issues(scoring, subdomains)
@@ -357,21 +349,10 @@ def calculate_score(db: Session, org_id: str):
     tls_security = _to_plain_dict(categorized.get("TLS Security"))
     dns_security = _to_plain_dict(categorized.get("DNS Security"))
 
-    categorized_vulnerabilities = {}
-    if app_security:
-        categorized_vulnerabilities["Application Security"] = app_security
-    if network_security:
-        categorized_vulnerabilities["Network Security"] = network_security
-    if tls_security:
-        categorized_vulnerabilities["TLS Security"] = tls_security
-    if dns_security:
-        categorized_vulnerabilities["DNS Security"] = dns_security
-
     ips_of_scan = get_ips_from_scan(subdomains)
 
-    # Upsert ScanSummary by domain
     existing_summary = db.query(ScanSummary).filter(
-        ScanSummary.domain == (root_domain or scan.domain)
+        ScanSummary.domain == root_domain
     ).first()
 
     if existing_summary:
@@ -386,7 +367,7 @@ def calculate_score(db: Session, org_id: str):
         existing_summary.ips = ips_of_scan
     else:
         new_summary = ScanSummary(
-            domain=root_domain or scan.domain,
+            domain=root_domain,
             org_id=org_id,
             domain_score=scoring["domain_score"],
             severity=scoring["severity"],
@@ -399,16 +380,14 @@ def calculate_score(db: Session, org_id: str):
         )
         db.add(new_summary)
 
-    db.commit()
+    score_history = ScanScoreHistory(
+        org_id=org_id,
+        domain=root_domain,
+        domain_score=scoring["domain_score"],
+    )
+    db.add(score_history)
 
-    return {
-        "org_id": org_id,
-        "domain_score": scoring["domain_score"],
-        "host": host,
-        "severity": scoring["severity"],
-        "categorized_vulnerabilities": categorized_vulnerabilities,
-        "ips": ips_of_scan
-    }
+    db.commit()
 
 def get_ips_from_scan(subdomains: list):
     ips = []

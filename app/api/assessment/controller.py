@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.db.models import Question, AssessmentResult
+from app.db.models import Question, AssessmentResult, User
 
 def calculateGrade(percentage: int) -> str:
     if percentage >= 90:
@@ -140,10 +140,17 @@ def submit_assessment_logic(body, user_id: str, db: Session):
 
     return new_result
 
-def get_latest_assessment(user_id: str, db: Session):
+def get_latest_assessment(org_id: str, db: Session):
+    if not org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User not associated with an organization"
+        )
+
     result = (
         db.query(AssessmentResult)
-        .filter(AssessmentResult.user_id == user_id)
+        .join(User, AssessmentResult.user_id == User.user_id)
+        .filter(User.org_id == org_id)
         .order_by(AssessmentResult.created_at.desc())
         .first()
     )

@@ -9,7 +9,7 @@ class Organization(Base):
 
     org_id = Column(String(36), primary_key=True)
     user_id = Column(String(36), ForeignKey("users.user_id"), nullable=False)
-    domain = Column(Text, nullable=False)
+    domain = Column(JSONB, nullable=True)
     max_domains = Column(Integer, default=1, nullable=False)
 
 class User(Base):
@@ -50,6 +50,13 @@ class PromoCode(Base):
     used_at = Column(TIMESTAMP, nullable=True)
     used_by = Column(String(36), ForeignKey("users.user_id"), nullable=True)
 
+class Blacklist(Base):
+    __tablename__ = "blacklist"
+
+    email = Column(String(255), primary_key=True)
+    blocked_by = Column(String(36), ForeignKey("users.user_id"), nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
 class Question(Base):
     __tablename__ = "questions"
 
@@ -68,31 +75,7 @@ class AssessmentResult(Base):
     answers = Column(JSONB, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-class ScanRequest(Base):
-    __tablename__ = "scan_request"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    org_id = Column(String(36), ForeignKey("organizations.org_id"), nullable=False)
-    domain = Column(Text, nullable=False)
-    time = Column(TIMESTAMP, server_default=func.now())
-    data = Column(JSONB, nullable=True)
-
-    __table_args__ = (
-        Index("idx_scan_request_org", "org_id"),
-        Index("idx_scan_request_domain", "domain"),
-    )
-
-class ScanResult(Base):
-    __tablename__ = "scan_result"
-
-    org_id = Column(String(36), ForeignKey("organizations.org_id"), primary_key=True)
-    domain = Column(Text, nullable=False)
-    results = Column(JSONB, nullable=False)
-    time = Column(TIMESTAMP, server_default=func.now())
-
-    __table_args__ = (
-        Index("idx_scan_result_domain", "domain"),
-    )
 
 class ScanSummary(Base):
     __tablename__ = "scan_summary"
@@ -110,4 +93,27 @@ class ScanSummary(Base):
 
     __table_args__ = (
         Index("idx_scan_summary_score", "domain_score"),
+    )
+
+
+class ScanScoreHistory(Base):
+    __tablename__ = "scan_score_history"
+
+    _id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(String(36), ForeignKey("organizations.org_id"), nullable=False)
+    domain = Column(Text, nullable=False)
+    domain_score = Column(Integer, nullable=False)
+    scan_date = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+
+
+class MalwareScanResult(Base):
+    __tablename__ = "malware_scan_results"
+
+    org_id = Column(String(36), ForeignKey("organizations.org_id"), primary_key=True)
+    domain = Column(Text, primary_key=True)
+    result = Column(JSONB, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("idx_malware_scan_org_domain", "org_id", "domain"),
     )
