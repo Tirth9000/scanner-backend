@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import User, AssessmentResult
 from app.core.middleware import protect
@@ -9,17 +9,21 @@ from app.api.assessment.controller import (
     get_latest_assessment
 )
 
-router = APIRouter(prefix="/api/assess", tags=["assessment"])
-
+router = APIRouter(prefix="/assess", tags=["assessment"])
 
 @router.post("/")
 async def submit_assessment(
     body: SubmitAssessmentBody,
     db: Session = Depends(get_db),
-    user: User = Depends(protect)
+    current_user = Depends(protect)
 ):
-    user_id = user.user_id
-    result = submit_assessment_logic(body, user_id, db)
+    if not current_user.org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User not associated with an organization"
+        )
+
+    result = submit_assessment_logic(body, current_user.user_id, db)
 
     return {
         "success": True,
@@ -33,13 +37,12 @@ async def submit_assessment(
         },
     }
 
-
 @router.get("/latest")
 async def get_latest_assessment_result(
     db: Session = Depends(get_db),
-    user: User = Depends(protect)
+    current_user = Depends(protect)
 ):
-    result = get_latest_assessment(user.user_id, db)
+    result = get_latest_assessment(current_user.org_id, db)
 
     return {
         "_id": str(result._id),
@@ -47,3 +50,33 @@ async def get_latest_assessment_result(
         "answers": result.answers,
         "created_at": result.created_at.isoformat(),
     }
+
+@router.get("/history")
+async def get_assessment_history(
+    limit: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user = Depends(protect)
+):
+    if not current_user.org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User not associated with an organization"
+        )
+
+    results = (
+        db.query(AssessmentResult)
+        .join(User, AssessmentResult.user_id == User.user_id)
+        .filter(User.org_id == current_user.org_id)
+        .order_by(AssessmentResult.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "_id": str(r._id),
+            "summary": r.summary,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in results
+    ]

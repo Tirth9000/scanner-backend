@@ -1,48 +1,53 @@
-# import os
-# import sys
-# import uuid
+import os
+import sys
+import uuid
+from dotenv import load_dotenv
 
-# # Ensure we can import from the app directory
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+load_dotenv()
 
-# from app.db.base import SessionLocal
-# from app.db.models import User
-# from app.api.auth.service import hashPassword
+from app.api.auth.service import hashPassword
+from app.db.base import SessionLocal
+from app.db.models import User
 
-# def create_admin_user(email=None, password=None):
-#     email = email or os.getenv("ADMIN_EMAIL")
-#     password = password or os.getenv("ADMIN_PASSWORD")
-    
-#     email = email.lower().strip()
 
-#     db = SessionLocal()
-#     try:
-#         # Check if user already exists
-#         existing_user = db.query(User).filter(User.email == email).first()
-#         if existing_user:
-#             return
+def create_admin_user():
+    email = os.getenv("ADMIN_EMAIL")
+    password = os.getenv("ADMIN_PASSWORD")
 
-#         user_id = str(uuid.uuid4())
-#         hashed_password = hashPassword(password)
+    missing = []
+    if not email:
+        missing.append("ADMIN_EMAIL")
+    if not password:
+        missing.append("ADMIN_PASSWORD")
+    if missing:
+        raise RuntimeError(f"{', '.join(missing)} missing in .env")
 
-#         new_admin = User(
-#             user_id=user_id,
-#             email=email,
-#             password=hashed_password,
-#             domain="system-admin",
-#             role="admin",
-#             organization_id=None # Admin belongs to no organization
-#         )
+    email = email.lower().strip()
 
-#         db.add(new_admin)
-#         db.commit()
-#         print(f"Admin user '{email}' auto-created successfully.")
+    db = SessionLocal()
+    try:
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            return
 
-#     except Exception as e:
-#         db.rollback()
-#         print(f"An error occurred while creating admin: {e}")
-#     finally:
-#         db.close()
+        new_admin = User(
+            user_id=str(uuid.uuid4()),
+            email=email,
+            password=hashPassword(password),
+            role="admin",
+            org_id=None,
+        )
 
-# if __name__ == "__main__":
-#     create_admin_user()
+        db.add(new_admin)
+        db.commit()
+        print(f"Admin user '{email}' auto-created successfully.")
+    except Exception as e:
+        db.rollback()
+        raise RuntimeError(f"An error occurred while creating admin: {e}") from e
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    create_admin_user()

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from app.db.models import ScanSummary, ScanResult
+from app.db.models import ScanSummary, ScanScoreHistory
 from sqlalchemy import desc
 START_SCORE = 100
 
@@ -324,34 +324,17 @@ def _to_plain_dict(value):
     }
 
 
-def calculate_score(db: Session, user_id: str):
-    scan = db.query(ScanResult).filter(
-        ScanResult.user_id == user_id
-    ).order_by(desc(ScanResult.time)).first()
+def calculate_and_store_summary(db: Session, org_id: str, target: str, raw_data: dict):
+    host = raw_data.get("host", {})
+    subdomains = raw_data.get("subdomains", [])
 
-    if not scan:
-        raise HTTPException(status_code=404, detail="Scan not found")
-
-    data = scan.results or {}
-    host = data.get("host", {})
-    # print("Host data:", host)
-    # print("Type of host data:", type(host))
-    subdomains = data.get("subdomains", [])
-    # print("Subdomains:", subdomains)
-    # print("Type of subdomains:", type(subdomains))
-    # Detect mail service
     mail_security = host.get("mail_security", {})
     has_mail_service = bool(
         mail_security.get("spf") or
         mail_security.get("dkim") or
         mail_security.get("mx")
     )
-    root_domain = host.get("domain")
-
-    # print("Host type:", type(host))
-    # print("Subdomains count:", len(subdomains))
-    # print("Has mail service:", has_mail_service)
-    # print("Root domain:", root_domain)
+    root_domain = host.get("domain") or target
 
     scoring = score_domain(subdomains, root_domain=root_domain, has_mail_service=has_mail_service)
     categorized = categorize_issues(scoring, subdomains)
@@ -366,42 +349,45 @@ def calculate_score(db: Session, user_id: str):
     tls_security = _to_plain_dict(categorized.get("TLS Security"))
     dns_security = _to_plain_dict(categorized.get("DNS Security"))
 
-    categorized_vulnerabilities = {}
-    if app_security:
-        categorized_vulnerabilities["Application Security"] = app_security
-    if network_security:
-        categorized_vulnerabilities["Network Security"] = network_security
-    if tls_security:
-        categorized_vulnerabilities["TLS Security"] = tls_security
-    if dns_security:
-        categorized_vulnerabilities["DNS Security"] = dns_security
-
     ips_of_scan = get_ips_from_scan(subdomains)
 
-    new_summary = ScanSummary(
-        user_id=user_id,
-        domain=root_domain or scan.domain,
+    existing_summary = db.query(ScanSummary).filter(
+        ScanSummary.domain == root_domain
+    ).first()
+
+    if existing_summary:
+        existing_summary.org_id = org_id
+        existing_summary.domain_score = scoring["domain_score"]
+        existing_summary.severity = scoring["severity"]
+        existing_summary.mail_security = mail_security
+        existing_summary.app_security = app_security
+        existing_summary.network_security = network_security
+        existing_summary.tls_security = tls_security
+        existing_summary.dns_security = dns_security
+        existing_summary.ips = ips_of_scan
+    else:
+        new_summary = ScanSummary(
+            domain=root_domain,
+            org_id=org_id,
+            domain_score=scoring["domain_score"],
+            severity=scoring["severity"],
+            mail_security=mail_security,
+            app_security=app_security,
+            network_security=network_security,
+            tls_security=tls_security,
+            dns_security=dns_security,
+            ips=ips_of_scan
+        )
+        db.add(new_summary)
+
+    score_history = ScanScoreHistory(
+        org_id=org_id,
+        domain=root_domain,
         domain_score=scoring["domain_score"],
-        severity=scoring["severity"],
-        mail_security=mail_security,
-        app_security=app_security,
-        network_security=network_security,
-        tls_security=tls_security,
-        dns_security=dns_security,
-        ips=ips_of_scan
     )
+    db.add(score_history)
 
-    db.add(new_summary)
     db.commit()
-
-    return {
-        "user_id": user_id,
-        "domain_score": scoring["domain_score"],
-        "host": host,
-        "severity": scoring["severity"],
-        "categorized_vulnerabilities": categorized_vulnerabilities,
-        "ips": ips_of_scan
-    }
 
 def get_ips_from_scan(subdomains: list):
     ips = []
@@ -412,6 +398,4 @@ def get_ips_from_scan(subdomains: list):
         ip = http_data.get("ip")
         if ip:
             ips.append(ip)
-            # print(f"Found IP: {ip} for subdomain: {item.get('subdomain')}")
-        # print(ips)
     return list(set(ips))
