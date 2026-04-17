@@ -15,11 +15,14 @@ from app.api.auth.service import (
 )
 from app.core.middleware import require_owner, protect
 from app.db.models import User, Organization
+from app.utils.captcha import verify_captcha
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/register')
-def register_route(req: RegisterRequest, db: Session = Depends(get_db)):
+async def register_route(req: RegisterRequest, db: Session = Depends(get_db)):
+    await verify_captcha(req.captcha_token)
+
     email = req.email
     password = req.password
     domain = req.domain
@@ -36,7 +39,9 @@ def register_route(req: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post('/login')
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+async def login(req: LoginRequest, db: Session = Depends(get_db)):
+    await verify_captcha(req.captcha_token)
+
     email = req.email
     password = req.password
 
