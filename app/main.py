@@ -13,6 +13,7 @@ from app.api.questions.routes import router as questions_router
 from app.api.analyzer.routes import router as analyzer_router
 from app.api.fix.routes import router as fix_router
 from app.api.admin.routes import router as admin_router
+from app.api.malware.routes import router as malware_router
 from app.api.questions.service import seed_questions_data
 from app.db.base import SessionLocal
 app = FastAPI()
@@ -36,12 +37,14 @@ async def startup_event():
     finally:
         db.close()
 
-    # try:
-        # # Attempt to create default admin 
-        # from scripts.create_admin import create_admin_user
-        # create_admin_user("admin@example.com", "admin")
-    # except Exception as e:
-    #     print(f"Failed to create default admin on startup: {e}")
+    try:
+        from scripts.create_admin import create_admin_user
+        create_admin_user()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"env details for admin are not set: {e}"
+        )
 
 # CORS
 app.add_middleware(
@@ -52,17 +55,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# routes
+
 app.include_router(auth_router)
 app.include_router(scanner_router)
-app.include_router(webhook_scanner_router)
 app.include_router(assessment_router)
 app.include_router(questions_router)
 app.include_router(analyzer_router)
 app.include_router(fix_router)
 app.include_router(admin_router)
-
-
+app.include_router(webhook_scanner_router)
+app.include_router(malware_router)
 
 if __name__ == "__main__":
     import uvicorn

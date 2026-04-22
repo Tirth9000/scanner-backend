@@ -1,57 +1,85 @@
-from fastapi import APIRouter, HTTPException, Depends
-import uuid
-import string
-import random
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.db.base import get_db
-from app.db.models import PromoCode
+
+from app.api.admin.schemas import BlacklistEmailRequest
+from app.api.admin.service import (
+    block_email,
+    generate_promo_code,
+    get_blacklisted_emails,
+    get_promo_codes,
+    get_scan_summaries,
+    get_total_scans,
+    get_users_by_org,
+    unblock_email,
+)
 from app.core.middleware import require_admin
-import os
+from app.db.base import get_db
+from app.db.models import User
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"])
 
-
-def _generate_promo_string(length: int = 10) -> str:
-    chars = string.ascii_uppercase + string.digits
-    return "".join(random.choices(chars, k=length))
 
 @router.post("/generate-promo")
 def generate_promo(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
 ):
-    code_str = _generate_promo_string()
-
-    while db.query(PromoCode).filter(PromoCode.code == code_str).first():
-        code_str = _generate_promo_string()
-
-    promo = PromoCode(
-        code_id=str(uuid.uuid4()),
-        code=code_str,
-        is_used=False,
-    )
-
-    db.add(promo)
-    db.commit()
-    db.refresh(promo)
-
-    return {
-        "message": "Promo code generated successfully",
-        "code": promo.code,
-    }
+    return generate_promo_code(db)
 
 
 @router.get("/promo-codes")
 def list_promo_codes(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
 ):
-    codes = db.query(PromoCode).all()
+    return get_promo_codes(db)
 
-    return [
-        {
-            "code": c.code,
-            "is_used": c.is_used,
-            "used_by_org": c.used_by_org,
-            "used_at": c.used_at.isoformat() if c.used_at else None,
-        }
-        for c in codes
-    ]
+
+@router.get("/users")
+def list_users_by_org(
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
+):
+    return get_users_by_org(db)
+
+
+@router.post("/blacklist/block")
+def block_user_by_email(
+    req: BlacklistEmailRequest,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    return block_email(req.email, current_admin, db)
+
+
+@router.post("/blacklist/unblock")
+def unblock_user_by_email(
+    req: BlacklistEmailRequest,
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
+):
+    return unblock_email(req.email, db)
+
+
+@router.get("/blacklist")
+def list_blacklisted_emails(
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
+):
+    return get_blacklisted_emails(db)
+
+
+@router.get("/scans/summaries")
+def list_scan_summaries(
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
+):
+    return get_scan_summaries(db)
+
+
+@router.get("/scans/total")
+def get_scans_total(
+    db: Session = Depends(get_db),
+    _current_admin: User = Depends(require_admin),
+):
+    return get_total_scans(db)

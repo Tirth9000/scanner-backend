@@ -1,5 +1,9 @@
 # Scanner Backend
-'
+<<<<<<< HEAD
+'.
+=======
+
+>>>>>>> 95ca74d (invite members to org via email, org-wise history, promo code generateion, redeem code, smtp email added plus some minor changes)
 The Scanner Backend is a FastAPI-based service designed to perform domain scanning, store scan results, and generate summarized security scores.
 It acts as the core engine that:
 Accepts scan requests
@@ -7,7 +11,7 @@ Processes domain-related data
 Stores results in a database
 Provides summarized insights and scores via APIs
 
-This backend is built with scalability and modularity in mind, making it easy to extend with new scanning features and analytics.
+ This backend is built with scalability and modularity in mind, making it easy to extend with new scanning features and analytics.
 
 ## Deployment
 
@@ -143,3 +147,4 @@ What Each Layer Does
     Adds middleware (e.g., CORS)
 
     Triggers DB initialization on startup
+# redeploy

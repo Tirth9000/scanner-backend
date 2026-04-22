@@ -1,69 +1,48 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from app.api.scanner.service import create_scan_task_to_queue
+from app.api.scanner.schemas import ScanRequest as ScanReqSchema
 from app.core.redis_queue import RedisClient
-from app.core.middleware import protect
+from app.core.middleware import require_owner
+from app.core.websocket_manager import ws_manager
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 import json
-from app.db.models import ScanResult, User
-from app.api.scanner.schemas import ScanRequest
+from app.db.models import User
 
 redis_client = RedisClient()
 
-router = APIRouter(prefix='/api/scanner', tags=["scanner"])
+router = APIRouter(prefix='/scanner', tags=["scanner"])
+
 
 @router.post("/register-scan-task")
 async def register_scan_task(
-    request:ScanRequest,
+    request: ScanReqSchema,
     db: Session = Depends(get_db),
-    user: User = Depends(protect)
+    user: User = Depends(require_owner)
 ):
-    target = request.domain
-    domain = target.strip().lower()
-    user_id = user.user_id
-    # print("user_id:",user_id)
-    # print(type(user_id))
-    return create_scan_task_to_queue(db, domain, user_id)
+    domain = request.domain.strip().lower()
+    org_id = user.org_id
 
-@router.get("/scanresult")
-def get_scan_result(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(protect)
-):
-    scan = db.query(ScanResult).filter(
-        ScanResult.user_id == current_user.user_id
-    ).all()
-    if not scan:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    return scan
+    result = create_scan_task_to_queue(db, domain, org_id)
 
-@router.get("/scan-history")
-def get_scan_history(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(protect)
-):
-    scans = db.query(ScanResult).filter(
-        ScanResult.user_id == current_user.user_id
-    ).order_by(ScanResult.time.desc()).all()
+    if isinstance(result, dict) and result.get("domain_validation"):
+        await ws_manager.send(org_id, {
+            "event": "domain_validation",
+            "org_id": org_id,
+            "domain": domain,
+        })
 
-    return [
-        {
-            "domain": s.domain,
-            "time": s.time.isoformat() if s.time else None,
-        }
-        for s in scans
-    ]
+    return result
 
 
-
-
-# for testing purpose only, to check the scan queue in redis
 @router.get("/scanlist")
 async def get_scan_list():
     data = redis_client.redis.lrange("scan_queue", 0, -1)
-    return  [json.loads(item) for item in data]
+    return [json.loads(item) for item in data]
+
 
 @router.get("/clear")
-async def clear_scan_queue(): 
+async def clear_scan_queue():
     redis_client.redis.delete("scan_queue")
     return {"message": "Scan queue cleared"}

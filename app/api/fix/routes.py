@@ -8,7 +8,7 @@ from app.db.base import get_db
 from app.api.fix.schemas import FixRequest, FixSubmitResponse, FixResultRequest, FixResultResponse
 from app.api.fix.service import apply_fix_result
 
-router = APIRouter(prefix="/api/fix", tags=["Fix"])
+router = APIRouter(prefix="/fix", tags=["Fix"])
 
 redis_client = RedisClient()
 QUEUE_NAME = "fix_queue"
@@ -16,11 +16,10 @@ QUEUE_NAME = "fix_queue"
 
 @router.post("/submit", response_model=FixSubmitResponse)
 def submit_fix(request: FixRequest, db: Session = Depends(get_db)):
-    from app.db.models import User
-    user = db.query(User).first()
-    current_user = {"domain": user.domain, "user_id": user.user_id, "organization_id": user.organization_id}
     try:
-        redis_client.redis.rpush(QUEUE_NAME, json.dumps(request.model_dump()))
+        job_data = request.model_dump()
+        job_data["scan_id"] = job_data["org_id"]
+        redis_client.redis.rpush(QUEUE_NAME, json.dumps(job_data))
     except Exception:
         raise HTTPException(
             status_code=503,
@@ -29,7 +28,7 @@ def submit_fix(request: FixRequest, db: Session = Depends(get_db)):
 
     return FixSubmitResponse(
         message="Fix request queued successfully",
-        scan_id=request.scan_id,
+        org_id=request.org_id,
     )
 
 
@@ -37,7 +36,7 @@ def submit_fix(request: FixRequest, db: Session = Depends(get_db)):
 def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
     try:
         fix_result = apply_fix_result(
-            scan_id=request.scan_id,
+            org_id=request.scan_id,
             domain=request.domain,
             fix_type=request.fix_type,
             result=request.result,
@@ -52,7 +51,7 @@ def submit_fix_result(request: FixResultRequest, db: Session = Depends(get_db)):
 
     return FixResultResponse(
         message="Fix result stored successfully",
-        scan_id=request.scan_id,
+        org_id=request.scan_id,
         domain_score=fix_result["domain_score"],
         severity=fix_result["severity"],
     )
