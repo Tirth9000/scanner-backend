@@ -5,10 +5,12 @@ class RegisterRequest(BaseModel):
     password: str
     domain: str
     name: str | None = None
+    captcha_token: str | None = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    captcha_token: str | None = None
 
 class InviteRequest(BaseModel):
     email: EmailStr
